@@ -1,10 +1,10 @@
 ' Get object from worksheet and return as ListObject
-Function getObject(workbook As Integer, objectName As String) As ListObject
+Function getObject(Workbook As Integer, objectName As String) As ListObject
     Dim object As ListObject
 
     ' Attempt to find the table by it's name
     On Error Resume Next
-    Set object = Worksheets(workbook).ListObjects(objectName)
+    Set object = Worksheets(Workbook).ListObjects(objectName)
     On Error GoTo 0
 
     ' Check ig the table was found. Give error if not, otherwise return ListObject
@@ -47,6 +47,9 @@ Sub ResizeResultTable()
     Set resultTable = getObject(1, "Result")
 
     If Not resultTable Is Nothing Then
+        ' Disable text wrapping while calculating widths
+        resultTable.Range.WrapText = False
+
         ' Get the current window width in points
         windowWidth = Application.ActiveWindow.usableWidth
         
@@ -64,6 +67,9 @@ Sub ResizeResultTable()
         
         ' Resize the title to fit the new width
         Range(cell(1, 1), cell(1, columnCount)).Merge Across:=True
+        
+        ' Re-enable text wrapping
+        resultTable.Range.WrapText = True
     End If
 End Sub
 
