@@ -1,4 +1,41 @@
-'Resize results table to match usable window width
+' Get object from worksheet and return as ListObject
+Function getObject(workbook As Integer, objectName As String) As ListObject
+    Dim object As ListObject
+
+    ' Attempt to find the table by it's name
+    On Error Resume Next
+    Set object = Worksheets(workbook).ListObjects(objectName)
+    On Error GoTo 0
+
+    ' Check ig the table was found. Give error if not, otherwise return ListObject
+    If object Is Nothing Then
+        ' Display a message that the object was not found
+        MsgBox "The " + objectName + " object could not be found!"
+        Exit Function
+    Else
+        Set getObject = object
+    End If
+End Function
+
+Function getConnection(connectionName As String)
+    Dim connection As WorkbookConnection
+
+    ' Attempt to find the connection by it's name
+    On Error Resume Next
+    Set connection = ThisWorkbook.Connections(connectionName)
+    On Error GoTo 0
+
+    ' Check if the connection was found
+    If connection Is Nothing Then
+        ' Display a message that the connection was not found
+        MsgBox "The " + connectionName + " connection could not be found!"
+        Exit Function
+    Else
+        Set getConnection = connection
+    End If
+End Function
+
+' Resize results table to match usable window width
 Sub ResizeResultTable()
     Dim resultTable As ListObject
     Dim cell As Range
@@ -6,17 +43,10 @@ Sub ResizeResultTable()
     Dim windowWidth As Double
     Dim columnCount As Integer
     Dim fontFactor As Double
-    
-    ' Attempt to find the table by its name
-    On Error Resume Next
-    Set resultTable = Worksheets(1).ListObjects("Result")
-    On Error GoTo 0
-    
-    ' Check if the tables were found
-    If resultTable Is Nothing Then
-        MsgBox "The 'Result' table does not exist on this sheet."
-        Exit Sub
-    Else
+
+    Set resultTable = getObject(1, "Result")
+
+    If Not resultTable Is Nothing Then
         ' Get the current window width in points
         windowWidth = Application.ActiveWindow.usableWidth
         
@@ -42,21 +72,10 @@ Sub RefreshResultTable()
     Dim conn As WorkbookConnection
     Dim productTable As ListObject
     
-    ' Attempt to find the connection by its name
-    On Error Resume Next
-    Set conn = ThisWorkbook.Connections("Results_Connection")
-    Set productTable = Worksheets(3).ListObjects("Product")
-    On Error GoTo 0
-    
-    ' Check if the connection and table were found
-    If conn Is Nothing Then
-        ' Display a message if the connection was not found
-        MsgBox "Connection named 'Results_Connection' not found in this workbook."
-    ElseIf productTable Is Nothing Then
-        ' Display a message if the table was not found
-        MsgBox "The 'Product' table does not exist on this sheet."
-        Exit Sub
-    Else
+    Set conn = getConnection("Results_Connection")
+    Set productTable = getObject(3, "Product")
+
+    If Not conn Is Nothing And Not productTable Is Nothing Then
         ' Refresh the page cell width limit
         Worksheets(1).ScrollArea = "A:" + Split(Cells(1, productTable.ListColumns.Count).Address, "$")(1)
         
@@ -73,23 +92,11 @@ Sub UpdateProductRooms()
     Dim room As Range
     Dim col As ListColumn
     
-    'Attempt to find the tables by name
-    On Error Resume Next
-    Set roomTable = Worksheets(2).ListObjects("Room")
-    Set productTable = Worksheets(3).ListObjects("Product")
-    On Error GoTo 0
-    
-    ' Check if the tables were found
-    If roomTable Is Nothing Then
-        ' Display a message if the table was not found
-        MsgBox "The 'Room' table does not exist on this sheet."
-        Exit Sub
-    ElseIf productTable Is Nothing Then
-        ' Display a message if the table was not found
-        MsgBox "The 'product' table does not exist on this sheet."
-        Exit Sub
-    Else
-        ' Get the list of rooms that should now exist
+    Set roomTable = getObject(2, "Room")
+    Set productTable = getObject(3, "Product")
+
+    If Not roomTable Is Nothing And Not productTable Is Nothing Then
+        ' Get rooms from table of rooms
         Set rooms = roomTable.ListColumns(1).DataBodyRange
 
         For Each room In rooms
