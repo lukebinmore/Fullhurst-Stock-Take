@@ -17,8 +17,8 @@ Function getObject(Workbook As Integer, objectName As String) As ListObject
     End If
 End Function
 
-' Resize the Product table to match usable window width
-Sub ResizeProductTable()
+' Set the styles of the page and format the content
+Sub SetPageStyle()
     Dim productTable As ListObject
     Dim cell As Range
     Dim column As ListColumn
@@ -29,8 +29,9 @@ Sub ResizeProductTable()
     Set productTable = getObject(1, "Product")
 
     If Not productTable Is Nothing Then
-        ' Disable text wrapping while calculating widths
+        ' Disable text wrapping while calculating widths and set default behaviours
         productTable.Range.WrapText = False
+        productTable.ShowAutoFilterDropDown = False
 
         ' Change scroll limit of the page to fit the table
         Worksheets(1).ScrollArea = "A:" + Split(Cells(1, productTable.ListColumns.Count).Address, "$")(1)
@@ -42,10 +43,13 @@ Sub ResizeProductTable()
         ' Calculate the font factor to account for the font and font size impact on cell width
         Set cell = Worksheets(1).Cells(1, 1)
         fontFactor = cell.Width / cell.ColumnWidth
+        windowWidth = windowWidth / fontFactor
         
         ' Calculate the new width for each column based on the window width and font factor
         For Each column In productTable.ListColumns
-            column.DataBodyRange.ColumnWidth = (windowWidth / columnCount) / fontFactor
+            column.Range.VerticalAlignment = xlCenter
+            column.Range.HorizontalAlignment = xlCenter
+            column.DataBodyRange.ColumnWidth = (windowWidth / columnCount)
         Next column
         
         ' Resize the title to fit the new width
@@ -89,11 +93,12 @@ Sub UpdateProductRooms()
     End If
     
     ' Resize the product table
-    ResizeProductTable
+    SetPageStyle
 End Sub
 
 'Run at launch
 Private Sub Workbook_Open()
     'Resize the product table to fit window
-    ResizeProductTable
+    SetPageStyle
 End Sub
+
