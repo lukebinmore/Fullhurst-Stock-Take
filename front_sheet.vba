@@ -17,51 +17,34 @@ Function getObject(Workbook As Integer, objectName As String) As ListObject
     End If
 End Function
 
-Function getConnection(connectionName As String)
-    Dim connection As WorkbookConnection
-
-    ' Attempt to find the connection by it's name
-    On Error Resume Next
-    Set connection = ThisWorkbook.Connections(connectionName)
-    On Error GoTo 0
-
-    ' Check if the connection was found
-    If connection Is Nothing Then
-        ' Display a message that the connection was not found
-        MsgBox "The " + connectionName + " connection could not be found!"
-        Exit Function
-    Else
-        Set getConnection = connection
-    End If
-End Function
-
-' Resize results table to match usable window width
-Sub ResizeResultTable()
-    Dim resultTable As ListObject
+' Resize the Product table to match usable window width
+Sub ResizeProductTable()
+    Dim productTable As ListObject
     Dim cell As Range
     Dim column As ListColumn
     Dim windowWidth As Double
     Dim columnCount As Integer
     Dim fontFactor As Double
 
-    Set resultTable = getObject(1, "Result")
+    Set productTable = getObject(1, "Product")
 
-    If Not resultTable Is Nothing Then
+    If Not productTable Is Nothing Then
         ' Disable text wrapping while calculating widths
-        resultTable.Range.WrapText = False
+        productTable.Range.WrapText = False
 
-        ' Get the current window width in points
+        ' Change scroll limit of the page to fit the table
+        Worksheets(1).ScrollArea = "A:" + Split(Cells(1, productTable.ListColumns.Count).Address, "$")(1)
+
+        ' Get the current window width in points, and the number of columns in the table
         windowWidth = Application.ActiveWindow.usableWidth
-        
-        ' Get the number of columns in the table
-        columnCount = resultTable.ListColumns.Count
+        columnCount = productTable.ListColumns.Count
         
         ' Calculate the font factor to account for the font and font size impact on cell width
         Set cell = Worksheets(1).Cells(1, 1)
         fontFactor = cell.Width / cell.ColumnWidth
         
         ' Calculate the new width for each column based on the window width and font factor
-        For Each column In resultTable.ListColumns
+        For Each column In productTable.ListColumns
             column.DataBodyRange.ColumnWidth = (windowWidth / columnCount) / fontFactor
         Next column
         
@@ -69,24 +52,7 @@ Sub ResizeResultTable()
         Range(cell(1, 1), cell(1, columnCount)).Merge Across:=True
         
         ' Re-enable text wrapping
-        resultTable.Range.WrapText = True
-    End If
-End Sub
-
-'Refresh results table data
-Sub RefreshResultTable()
-    Dim conn As WorkbookConnection
-    Dim productTable As ListObject
-    
-    Set conn = getConnection("Results_Connection")
-    Set productTable = getObject(3, "Product")
-
-    If Not conn Is Nothing And Not productTable Is Nothing Then
-        ' Refresh the page cell width limit
-        Worksheets(1).ScrollArea = "A:" + Split(Cells(1, productTable.ListColumns.Count).Address, "$")(1)
-        
-        ' Refresh the connection
-        conn.Refresh
+        productTable.Range.WrapText = True
     End If
 End Sub
 
@@ -99,7 +65,7 @@ Sub UpdateProductRooms()
     Dim col As ListColumn
     
     Set roomTable = getObject(2, "Room")
-    Set productTable = getObject(3, "Product")
+    Set productTable = getObject(1, "Product")
 
     If Not roomTable Is Nothing And Not productTable Is Nothing Then
         ' Get rooms from table of rooms
@@ -122,16 +88,12 @@ Sub UpdateProductRooms()
         Next
     End If
     
-    ' Refresh and resize the results table
-    RefreshResultTable
-    ResizeResultTable
+    ' Resize the product table
+    ResizeProductTable
 End Sub
 
 'Run at launch
 Private Sub Workbook_Open()
-    'Refresh table data
-    RefreshResultTable
-
-    'Resize results table to fit window
-    ResizeResultTable
+    'Resize the product table to fit window
+    ResizeProductTable
 End Sub
