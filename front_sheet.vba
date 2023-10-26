@@ -96,9 +96,40 @@ Sub UpdateProductRooms()
     SetPageStyle
 End Sub
 
+' Sort & Filter options
+Sub UpdateDropdowns()
+    Dim productTable As ListObject
+    Dim sortBox As Range
+    Dim sortOptions As String
+    Dim column As ListColumn
+
+    Set productTable = getObject(1, "Product")
+    Set sortBox = Worksheets(1).Range("D3")
+
+    If Not productTable Is Nothing Then
+        ' Remove Existing Sort Options
+        sortBox.Validation.Delete
+        
+        ' Add each table heading to a string of options
+        For Each column In productTable.ListColumns
+            sortOptions = sortOptions + column.Name + ","
+        Next
+
+        ' Remove the trailing comma from the string of options
+        sortOptions = Left(sortOptions, Len(sortOptions) - 1)
+
+        ' Create the sort dropdown, and add a default value if the box is empty
+        sortBox.Validation.Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Formula1:=sortOptions
+        If sortBox.Value = "" Then
+            sortBox.Value = "Default"
+        End If
+    End If
+End Sub
+
 'Run at launch
 Private Sub Workbook_Open()
     'Resize the product table to fit window
     SetPageStyle
 End Sub
+
 
