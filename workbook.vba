@@ -1,10 +1,30 @@
+' Global Variables
+public frontPage As Worksheet
+public filterDatabase As Worksheet
+Public productTable As ListObject
+Public roomTable As ListObject
+Public sortCell As Range
+Public sortDirectionCell As Range
+Public minColumnWidth As Integer
+
+' Get Global Variables
+Public Sub GetVariables()
+    Set frontPage = ThisWorkbook.Worksheets(1)
+    Set filterDatabase = ThisWorkbook.Worksheets(2)
+    Set productTable = GetObject(1, "Product")
+    Set roomTable = GetObject(2, "Room")
+    Set sortCell = frontPage.Range("E3")
+    Set sortDirectionCell = frontPage.Range("E4")
+    minColumnWidth = 20
+End Sub
+
 ' Get object from worksheet and return as ListObject
-Function getObject(Workbook As Integer, objectName As String) As ListObject
+Public Function GetObject(Workbook As Integer, objectName As String) As ListObject
     Dim object As ListObject
 
     ' Attempt to find the table by it's name
     On Error Resume Next
-    Set object = Worksheets(Workbook).ListObjects(objectName)
+    Set object = ThisWorkbook.Worksheets(Workbook).ListObjects(objectName)
     On Error GoTo 0
 
     ' Check ig the table was found. Give error if not, otherwise return ListObject
@@ -13,31 +33,29 @@ Function getObject(Workbook As Integer, objectName As String) As ListObject
         MsgBox "The " + objectName + " object could not be found!"
         Exit Function
     Else
-        Set getObject = object
+        Set GetObject = object
     End If
 End Function
 
 ' Set the styles of the page and format the content
-Sub SetPageStyle()
-    Dim productTable As ListObject
+Public Sub SetPageStyle()
     Dim cell As Range
     Dim column As ListColumn
     Dim windowWidth As Double
     Dim columnCount As Integer
     Dim fontFactor As Double
 
-    Set productTable = getObject(1, "Product")
-
     If Not productTable Is Nothing Then
-        ' Disable text wrapping while calculating widths and set default behaviours
+        ' Set table stylings such as text wrapping and autofit
         productTable.Range.WrapText = False
         productTable.ShowAutoFilterDropDown = False
+        productTable.Range.EntireColumn.AutoFit
+        productTable.Range.EntireRow.AutoFit
 
         ' Change scroll limit of the page to fit the table
-        Worksheets(1).ScrollArea = "A:" + Split(Cells(1, productTable.ListColumns.Count).Address, "$")(1)
+        frontPage.ScrollArea = "A:" + Split(Cells(1, productTable.ListColumns.Count).Address, "$")(1)
 
-        ' Get the current window width in points, and the number of columns in the table
-        windowWidth = Application.ActiveWindow.usableWidth
+        ' Get the number of columns in the table
         columnCount = productTable.ListColumns.Count
         
         ' Calculate the font factor to account for the font and font size impact on cell width
@@ -45,11 +63,16 @@ Sub SetPageStyle()
         fontFactor = cell.Width / cell.ColumnWidth
         windowWidth = windowWidth / fontFactor
         
-        ' Calculate the new width for each column based on the window width and font factor
+        ' Set autofit on all columns in the table, but then resize larger cells to a max width
         For Each column In productTable.ListColumns
+            ' Set alignment of cells content
             column.Range.VerticalAlignment = xlCenter
             column.Range.HorizontalAlignment = xlCenter
-            column.DataBodyRange.ColumnWidth = (windowWidth / columnCount)
+
+            ' If column is too large, set it to max
+            If column.DataBodyRange.ColumnWidth > minColumnWidth Then
+                column.DataBodyRange.ColumnWidth = minColumnWidth
+            End If
         Next column
         
         ' Resize the title to fit the new width
@@ -60,16 +83,11 @@ Sub SetPageStyle()
     End If
 End Sub
 
-'Update product table with new rooms
-Sub UpdateProductRooms()
-    Dim roomTable As ListObject
-    Dim productTable As ListObject
+' Update product table with new rooms
+Public Sub UpdateProductRooms()
     Dim rooms As Range
     Dim room As Range
     Dim col As ListColumn
-    
-    Set roomTable = getObject(2, "Room")
-    Set productTable = getObject(1, "Product")
 
     If Not roomTable Is Nothing And Not productTable Is Nothing Then
         ' Get rooms from table of rooms
@@ -97,18 +115,13 @@ Sub UpdateProductRooms()
 End Sub
 
 ' Sort & Filter options
-Sub UpdateDropdowns()
-    Dim productTable As ListObject
-    Dim sortBox As Range
+Public Sub UpdateDropdowns()
     Dim sortOptions As String
     Dim column As ListColumn
 
-    Set productTable = getObject(1, "Product")
-    Set sortBox = Worksheets(1).Range("D3")
-
     If Not productTable Is Nothing Then
         ' Remove Existing Sort Options
-        sortBox.Validation.Delete
+        sortCell.Validation.Delete
         
         ' Add each table heading to a string of options
         For Each column In productTable.ListColumns
@@ -119,17 +132,37 @@ Sub UpdateDropdowns()
         sortOptions = Left(sortOptions, Len(sortOptions) - 1)
 
         ' Create the sort dropdown, and add a default value if the box is empty
-        sortBox.Validation.Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Formula1:=sortOptions
-        If sortBox.Value = "" Then
-            sortBox.Value = "Default"
+        sortCell.Validation.Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Formula1:=sortOptions
+        If sortCell.Value = "" Then
+            sortCell.Value = "Default"
         End If
     End If
 End Sub
 
-'Run at launch
+' Sort product table
+Public Sub SortProductTable()
+    Dim sortDirection As Variant
+
+    ' Identify correct sort order
+    If sortDirectionCell.Value = "Descending" Then
+        sortDirection = xlDescending
+    Else
+        sortDirection = xlAscending
+    End If
+
+    ' Apply sorting options to product table
+    With productTable.Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=Range("Product[" + sortCell.Value + "]"), SortOn:=xlSortOnValues, Order:=sortDirection
+        .Header = xlYes
+        .Apply
+    End With
+End Sub
+
+' Run at launch
 Private Sub Workbook_Open()
-    'Resize the product table to fit window
-    SetPageStyle
+    ' Get global variables
+    GetVariables
 End Sub
 
 
