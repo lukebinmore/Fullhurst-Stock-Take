@@ -1,21 +1,35 @@
 ' Global Variables
-public frontPage As Worksheet
-public filterDatabase As Worksheet
+Public frontPage As Worksheet
+Public filterDatabase As Worksheet
 Public productTable As ListObject
+Public campustable As ListObject
+Public typeTable As ListObject
+Public supplierTable As ListObject
 Public roomTable As ListObject
+Public subjectTable As ListObject
+Public newProductTable As ListObject
 Public sortCell As Range
+Public searchCell As Range
 Public sortDirectionCell As Range
 Public minColumnWidth As Integer
+Public maxColumnWidth As Integer
 
 ' Get Global Variables
 Public Sub GetVariables()
     Set frontPage = ThisWorkbook.Worksheets(1)
     Set filterDatabase = ThisWorkbook.Worksheets(2)
     Set productTable = GetObject(1, "Product")
+    Set campustable = GetObject(2, "Campus")
+    Set typeTable = GetObject(2, "Type")
+    Set supplierTable = GetObject(2, "Supplier")
     Set roomTable = GetObject(2, "Room")
+    Set subjectTable = GetObject(2, "Subject")
+    Set newProductTable = GetObject(1, "NewProduct")
     Set sortCell = frontPage.Range("E3")
     Set sortDirectionCell = frontPage.Range("E4")
+    Set searchCell = frontPage.Range("B14")
     minColumnWidth = 20
+    maxColumnWidth = 5
 End Sub
 
 ' Get object from worksheet and return as ListObject
@@ -37,8 +51,20 @@ Public Function GetObject(Workbook As Integer, objectName As String) As ListObje
     End If
 End Function
 
+' Check value exists in table
+Public Function CheckValueExists(ByVal value As String, ByVal table As ListObject)
+    If IsError(Application.Match(value, table.ListColumns(1).DataBodyRange, 0)) Then
+        CheckValueExists = False
+    Else
+        CheckValueExists = True
+    End If
+End Function
+
 ' Set the styles of the page and format the content
 Public Sub SetPageStyle()
+    ' Disable application events to prevent crash
+    Application.EnableEvents = False
+    
     Dim cell As Range
     Dim column As ListColumn
     Dim windowWidth As Double
@@ -72,6 +98,8 @@ Public Sub SetPageStyle()
             ' If column is too large, set it to max
             If column.DataBodyRange.ColumnWidth > minColumnWidth Then
                 column.DataBodyRange.ColumnWidth = minColumnWidth
+            ElseIf column.DataBodyRange.ColumnWidth < maxColumnWidth Then
+                column.DataBodyRange.ColumnWidth = maxColumnWidth
             End If
         Next column
         
@@ -81,10 +109,16 @@ Public Sub SetPageStyle()
         ' Re-enable text wrapping
         productTable.Range.WrapText = True
     End If
+
+    ' Re-Enable events
+    Application.EnableEvents = True
 End Sub
 
 ' Update product table with new rooms
 Public Sub UpdateProductRooms()
+    ' Disable application events to prevent crash
+    Application.EnableEvents = False
+    
     Dim rooms As Range
     Dim room As Range
     Dim col As ListColumn
@@ -95,16 +129,16 @@ Public Sub UpdateProductRooms()
 
         For Each room In rooms
             ' Check if the current cell is empty
-            If Not Trim(room.Value) = "" Then
+            If Not Trim(room.value) = "" Then
                 On Error Resume Next
                 ' Reset the col object & attempt to find new room column
                 Set col = Nothing
-                Set col = productTable.ListColumns(room.Value)
+                Set col = productTable.ListColumns(room.value)
                 On Error GoTo 0
                 ' Check if the room column exists in the product table
                 If col Is Nothing Then
                     ' Add new room column
-                    productTable.ListColumns.Add.Name = room.Value
+                    productTable.ListColumns.Add.Name = room.value
                 End If
             End If
         Next
@@ -112,10 +146,16 @@ Public Sub UpdateProductRooms()
     
     ' Resize the product table
     SetPageStyle
+
+    ' Re-Enable events
+    Application.EnableEvents = True
 End Sub
 
 ' Sort & Filter options
 Public Sub UpdateDropdowns()
+    ' Disable application events to prevent crash
+    Application.EnableEvents = False
+    
     Dim sortOptions As String
     Dim column As ListColumn
 
@@ -133,18 +173,24 @@ Public Sub UpdateDropdowns()
 
         ' Create the sort dropdown, and add a default value if the box is empty
         sortCell.Validation.Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Formula1:=sortOptions
-        If sortCell.Value = "" Then
-            sortCell.Value = "Default"
+        If sortCell.value = "" Then
+            sortCell.value = "Default"
         End If
     End If
+
+    ' Re-Enable events
+    Application.EnableEvents = True
 End Sub
 
 ' Sort product table
 Public Sub SortProductTable()
+    ' Disable application events to prevent crash
+    Application.EnableEvents = False
+    
     Dim sortDirection As Variant
 
     ' Identify correct sort order
-    If sortDirectionCell.Value = "Descending" Then
+    If sortDirectionCell.value = "Descending" Then
         sortDirection = xlDescending
     Else
         sortDirection = xlAscending
@@ -153,16 +199,131 @@ Public Sub SortProductTable()
     ' Apply sorting options to product table
     With productTable.Sort
         .SortFields.Clear
-        .SortFields.Add Key:=Range("Product[" + sortCell.Value + "]"), SortOn:=xlSortOnValues, Order:=sortDirection
+        .SortFields.Add Key:=Range("Product[" + sortCell.value + "]"), SortOn:=xlSortOnValues, Order:=sortDirection
         .Header = xlYes
         .Apply
     End With
+
+    ' Re-Enable events
+    Application.EnableEvents = True
+End Sub
+
+' Search the product table with text
+Public Sub SearchProductTable()
+    ' Disable application events to prevent crash
+    Application.EnableEvents = False
+
+    Dim searchInput As String
+
+    ' Get global variables
+    GetVariables
+    
+    ' Clear previous search filter
+    productTable.Range.AutoFilter Field:=1
+
+    ' Filter the table with the value in the cell
+    If Not searchCell.value = "" Then
+        productTable.Range.AutoFilter Field:=1, Criteria1:= _
+        "=*" & searchCell.value & "*", Operator:=xlAnd
+    End If
+
+    ' Re-Enable events
+    Application.EnableEvents = True
+End Sub
+
+' Add new items to product table
+Public Sub AddNewProduct()
+    ' Disable events to prevent crash
+    Application.EnableEvents = False
+
+    ' Get Variables
+    GetVariables
+
+    Dim newName, newDesc, newType, newSupplier, newProdCode, newSubject, newCampus, newRoom As String
+    Dim newQuantity As Integer
+    Dim newRow As ListRow
+    Dim roomRowIndex As Integer
+
+    ' Get data from table
+    With newProductTable.DataBodyRange
+        newName = .Cells(1, 1)
+        newDesc = .Cells(1, 2)
+        newType = .Cells(1, 3)
+        newSupplier = .Cells(1, 4)
+        newProdCode = .Cells(1, 5)
+        newSubject = .Cells(1, 6)
+        newCampus = .Cells(1, 7)
+        newRoom = .Cells(1, 8)
+        newQuantity = .Cells(1, 9)
+    End With
+
+    ' Check if type exists, add it to table if it doesn't
+    If Not CheckValueExists(newType, typeTable) Then
+        Dim typeRow As ListRow
+        Set typeRow = typeTable.ListRows.Add
+        typeRow.Range(1) = newType
+    End If
+
+    ' Check if supplier exists, add it to table if it doesn't
+    If Not CheckValueExists(newSupplier, supplierTable) Then
+        Dim supplierRow As ListRow
+        Set supplierRow = supplierTable.ListRows.Add
+        supplierRow.Range(1) = newSupplier
+    End If
+
+    ' Check if subject exists, add it to table if it doesn't
+    If Not CheckValueExists(newSubject, subjectTable) Then
+        Dim subjectRow As ListRow
+        Set subjectRow = subjectTable.ListRows.Add
+        subjectRow.Range(1) = newSubject
+    End If
+
+    ' Check if campus exists, add it to table if it doesn't
+    If Not CheckValueExists(newCampus, campustable) Then
+        Dim campusRow As ListRow
+        Set campusRow = campustable.ListRows.Add
+        campusRow.Range(1) = newCampus
+    End If
+
+    ' Check if room exists, add it to table if it doesn't
+    If Not CheckValueExists(newRoom, roomTable) Then
+        Dim roomRow As ListRow
+        Set roomRow = roomTable.ListRows.Add
+        roomRow.Range(1) = newRoom
+
+        ' Update product table with new room
+        UpdateProductRooms
+    End If
+
+    ' Set row index of room column in product table
+    roomRowIndex = productTable.ListColumns(newRoom).Index
+
+    ' Add new row
+    Set newRow = productTable.ListRows.Add
+    With newRow
+        .Range(1) = newName
+        .Range(2) = newDesc
+        .Range(3) = newType
+        .Range(4) = newSupplier
+        .Range(5) = newProdCode
+        .Range(6) = newSubject
+        .Range(7) = newCampus
+        .Range(roomRowIndex) = newQuantity
+    End With
+
+    ' Update dropdowns and refresh styling
+    UpdateDropdowns
+    SetPageStyle
+
+    ' Re-Enable events
+    Application.EnableEvents = True
 End Sub
 
 ' Run at launch
 Private Sub Workbook_Open()
     ' Get global variables
     GetVariables
+    
+    ' Ensure events are enabled
+    Application.EnableEvents = True
 End Sub
-
-
