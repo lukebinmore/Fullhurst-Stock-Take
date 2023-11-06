@@ -2,7 +2,8 @@
 Public frontPage As Worksheet
 Public filterDatabase As Worksheet
 Public productTable As ListObject
-Public campustable As ListObject
+Public filterTable As ListObject
+Public campusTable As ListObject
 Public typeTable As ListObject
 Public supplierTable As ListObject
 Public roomTable As ListObject
@@ -19,7 +20,8 @@ Public Sub GetVariables()
     Set frontPage = ThisWorkbook.Worksheets(1)
     Set filterDatabase = ThisWorkbook.Worksheets(2)
     Set productTable = GetObject(1, "Product")
-    Set campustable = GetObject(2, "Campus")
+    Set filterTable = GetObject(1, "Filter")
+    Set campusTable = GetObject(2, "Campus")
     Set typeTable = GetObject(2, "Type")
     Set supplierTable = GetObject(2, "Supplier")
     Set roomTable = GetObject(2, "Room")
@@ -324,9 +326,9 @@ Public Sub AddNewProduct()
     End If
 
     ' Check if campus exists, add it to table if it doesn't
-    If Not CheckValueExists(newCampus, campustable) And Not newCampus = "" Then
+    If Not CheckValueExists(newCampus, campusTable) And Not newCampus = "" Then
         Dim campusRow As ListRow
-        Set campusRow = campustable.ListRows.Add
+        Set campusRow = campusTable.ListRows.Add
         campusRow.Range(1) = newCampus
     End If
 
@@ -377,6 +379,144 @@ Public Sub ErrorMessage()
     If Err.Number <> 0 Then
         MsgBox "Something went wrong, Please try again"
     End If
+End Sub
+
+' Reset filters
+Public Sub ResetFilters()
+    ' Disable events to prevent crash
+    Application.EnableEvents = False
+
+    Dim Column As ListColumn
+
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
+
+    ' Get global variables
+    GetVariables
+
+    If Not filterTable Is Nothing Then
+        ' Clear all filter values
+        For Each column In filterTable.ListColumns
+            filterTable.DataBodyRange.Cells(1, column.Index).Value = ""
+            filterTable.DataBodyRange.Cells(2, column.Index).Value = ""
+        Next
+    End If
+
+    ' Apply new filters to product table
+    ApplyProductFilters
+
+    ' Provide error message to user
+ErrorHandler:
+        ErrorMessage
+
+    ' Re-Enable events
+    Application.EnableEvents = True
+End Sub
+
+' Filter table base on user choices
+Public Sub SetProductFilters()
+    ' Disable events to prevent crash
+    Application.EnableEvents = False
+
+    Dim column As ListColumn
+
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
+
+    ' Get global variables
+    GetVariables
+
+    ' Complete checks for each column in filter table
+    For Each column In filterTable.ListColumns
+        Dim appliedFilterCell As Range
+        Dim newFilter As Range
+
+        ' Get data from column input and current filters
+        Set appliedFilterCell = filterTable.DataBodyRange.Cells(2, column.Index)
+        Set newFilterCell = filterTable.DataBodyRange.Cells(1, column.Index)
+
+        ' Check if value has been entered into input cell
+        If Not newFilterCell.Value = "" Then
+            Dim filter As Variant
+            Dim exists As Boolean
+            
+            ' Assume that the new filter doesn't already exist
+            exists = False
+
+            ' Check if item already exists in applied filters
+            For Each filter In Split(appliedFilterCell.Value, ",")
+                If filter = newFilterCell.Value Then
+                    exists = True
+                End If
+            Next
+
+            ' If item is new, add it to filter list
+            If Not exists Then
+                If Not AppliedFilterCell.Value = "" Then
+                    AppliedFilterCell.Value = AppliedFilterCell.Value + "," + newFilterCell.Value
+                Else
+                    AppliedFilterCell.Value = newFilterCell.Value
+                End If
+            End If
+
+            ' Clear input cell
+            newFilterCell.Value = ""
+        End If
+    Next
+
+    ' Apply new filters
+    ApplyProductFilters
+
+    ' Provide error message to user
+ErrorHandler:
+        ErrorMessage
+
+    ' Re-Enable events
+    Application.EnableEvents = True
+End Sub
+
+' Apply product table filters
+Public Sub ApplyProductFilters()
+    ' Disable events to prevent crash
+    Application.EnableEvents = False
+
+    Dim column As ListColumn
+
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
+
+    ' Get global variables
+    GetVariables
+
+    ' Complete checks for each column in filter table
+    For Each column In filterTable.ListColumns
+        Dim filtersCell As Range
+        Dim filters() As String
+        Dim filter as Variant
+        Dim productColumnIndex As Integer
+
+        ' Get filters to apply
+        Set filtersCell = filterTable.DataBodyRange.Cells(2, column.Index)
+        filters = Split(filtersCell.Value, ",")
+
+        ' Get product column index to apply filter to
+        productColumnIndex = productTable.ListColumns(column.Name).Index
+
+        ' Clear previous filters
+        productTable.Range.AutoFilter Field:=productColumnIndex
+
+        ' Filter the table with the value in the cell
+        If Not filtersCell.Value = "" Then
+            productTable.Range.AutoFilter Field:=productColumnIndex, Criteria1:=filters, Operator:=xlFilterValues
+        End If
+    Next
+
+    ' Provide error message to user
+ErrorHandler:
+        ErrorMessage
+
+    ' Re-Enable events
+    Application.EnableEvents = True
 End Sub
 
 ' Run at launch
