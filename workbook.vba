@@ -71,6 +71,9 @@ Public Sub SetPageStyle()
     Dim columnCount As Integer
     Dim fontFactor As Double
 
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
+
     If Not productTable Is Nothing Then
         ' Set table stylings such as text wrapping and autofit
         productTable.Range.WrapText = False
@@ -110,6 +113,10 @@ Public Sub SetPageStyle()
         productTable.Range.WrapText = True
     End If
 
+    ' Provide error message to user
+ErrorHandler:
+        ErrorMessage
+
     ' Re-Enable events
     Application.EnableEvents = True
 End Sub
@@ -123,20 +130,30 @@ Public Sub UpdateProductRooms()
     Dim room As Range
     Dim col As ListColumn
 
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
+
+    ' Get global variables
+    GetVariables
+
     If Not roomTable Is Nothing And Not productTable Is Nothing Then
         ' Get rooms from table of rooms
         Set rooms = roomTable.ListColumns(1).DataBodyRange
-
+        
+        ' Loop through each room in the table
         For Each room In rooms
             ' Check if the current cell is empty
             If Not Trim(room.value) = "" Then
-                On Error Resume Next
                 ' Reset the col object & attempt to find new room column
                 Set col = Nothing
+                On Error Resume Next
                 Set col = productTable.ListColumns(room.value)
-                On Error GoTo 0
+
                 ' Check if the room column exists in the product table
                 If col Is Nothing Then
+                    ' Change scroll limit of the page to fit the table
+                    frontPage.ScrollArea = "A:" + Split(Cells(1, productTable.ListColumns.Count + 1).Address, "$")(1)
+
                     ' Add new room column
                     productTable.ListColumns.Add.Name = room.value
                 End If
@@ -146,6 +163,10 @@ Public Sub UpdateProductRooms()
     
     ' Resize the product table
     SetPageStyle
+
+    ' Provide error message to user
+ErrorHandler:
+        ErrorMessage
 
     ' Re-Enable events
     Application.EnableEvents = True
@@ -158,6 +179,9 @@ Public Sub UpdateDropdowns()
     
     Dim sortOptions As String
     Dim column As ListColumn
+
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
 
     If Not productTable Is Nothing Then
         ' Remove Existing Sort Options
@@ -178,6 +202,10 @@ Public Sub UpdateDropdowns()
         End If
     End If
 
+    ' Provide error message to user
+ErrorHandler:
+        ErrorMessage
+
     ' Re-Enable events
     Application.EnableEvents = True
 End Sub
@@ -188,6 +216,9 @@ Public Sub SortProductTable()
     Application.EnableEvents = False
     
     Dim sortDirection As Variant
+
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
 
     ' Identify correct sort order
     If sortDirectionCell.value = "Descending" Then
@@ -204,6 +235,10 @@ Public Sub SortProductTable()
         .Apply
     End With
 
+    ' Provide error message to user
+ErrorHandler:
+        ErrorMessage
+
     ' Re-Enable events
     Application.EnableEvents = True
 End Sub
@@ -214,6 +249,9 @@ Public Sub SearchProductTable()
     Application.EnableEvents = False
 
     Dim searchInput As String
+
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
 
     ' Get global variables
     GetVariables
@@ -227,6 +265,10 @@ Public Sub SearchProductTable()
         "=*" & searchCell.value & "*", Operator:=xlAnd
     End If
 
+    ' Provide error message to user
+ErrorHandler:
+        ErrorMessage
+
     ' Re-Enable events
     Application.EnableEvents = True
 End Sub
@@ -236,13 +278,16 @@ Public Sub AddNewProduct()
     ' Disable events to prevent crash
     Application.EnableEvents = False
 
-    ' Get Variables
-    GetVariables
-
     Dim newName, newDesc, newType, newSupplier, newProdCode, newSubject, newCampus, newRoom As String
     Dim newQuantity As Integer
     Dim newRow As ListRow
     Dim roomRowIndex As Integer
+
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
+
+    ' Get Variables
+    GetVariables
 
     ' Get data from table
     With newProductTable.DataBodyRange
@@ -258,35 +303,35 @@ Public Sub AddNewProduct()
     End With
 
     ' Check if type exists, add it to table if it doesn't
-    If Not CheckValueExists(newType, typeTable) Then
+    If Not CheckValueExists(newType, typeTable) And Not newType = "" Then
         Dim typeRow As ListRow
         Set typeRow = typeTable.ListRows.Add
         typeRow.Range(1) = newType
     End If
 
     ' Check if supplier exists, add it to table if it doesn't
-    If Not CheckValueExists(newSupplier, supplierTable) Then
+    If Not CheckValueExists(newSupplier, supplierTable) And Not newSupplier = "" Then
         Dim supplierRow As ListRow
         Set supplierRow = supplierTable.ListRows.Add
         supplierRow.Range(1) = newSupplier
     End If
 
     ' Check if subject exists, add it to table if it doesn't
-    If Not CheckValueExists(newSubject, subjectTable) Then
+    If Not CheckValueExists(newSubject, subjectTable) And Not newSubject = "" Then
         Dim subjectRow As ListRow
         Set subjectRow = subjectTable.ListRows.Add
         subjectRow.Range(1) = newSubject
     End If
 
     ' Check if campus exists, add it to table if it doesn't
-    If Not CheckValueExists(newCampus, campustable) Then
+    If Not CheckValueExists(newCampus, campustable) And Not newCampus = "" Then
         Dim campusRow As ListRow
         Set campusRow = campustable.ListRows.Add
         campusRow.Range(1) = newCampus
     End If
 
     ' Check if room exists, add it to table if it doesn't
-    If Not CheckValueExists(newRoom, roomTable) Then
+    If Not CheckValueExists(newRoom, roomTable) And Not newRoom = "" Then
         Dim roomRow As ListRow
         Set roomRow = roomTable.ListRows.Add
         roomRow.Range(1) = newRoom
@@ -308,15 +353,30 @@ Public Sub AddNewProduct()
         .Range(5) = newProdCode
         .Range(6) = newSubject
         .Range(7) = newCampus
-        .Range(roomRowIndex) = newQuantity
+
+        ' Check if room has been entered
+        If Not newRoom = "" Then
+            .Range(roomRowIndex) = newQuantity
+        End If
     End With
 
     ' Update dropdowns and refresh styling
     UpdateDropdowns
     SetPageStyle
 
+    ' Provide error message to user
+ErrorHandler:
+        ErrorMessage
+
     ' Re-Enable events
     Application.EnableEvents = True
+End Sub
+
+' Display error message
+Public Sub ErrorMessage()
+    If Err.Number <> 0 Then
+        MsgBox "Something went wrong, Please try again"
+    End If
 End Sub
 
 ' Run at launch
@@ -326,4 +386,8 @@ Private Sub Workbook_Open()
     
     ' Ensure events are enabled
     Application.EnableEvents = True
+
+    ' Apply page style
+    SetPageStyle
 End Sub
+
