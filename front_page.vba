@@ -1,3 +1,16 @@
+' Run when create backup button clicked
+Private Sub BTNBackup_Click()
+    Dim newPath As String
+    ' Get the current directory and create a new copy of this file
+    newPath = ThisWorkbook.Path & Application.PathSeparator & "Inventory Database Backup.xlsm"
+    ThisWorkbook.SaveCopyAs Filename:=newPath
+End Sub
+
+' Run when export data button clicked
+Private Sub BTNExport_Click()
+    ThisWorkbook.ExportProductData
+End Sub
+
 ' Run when add new product button clicked
 Private Sub BTNNew_Click()
     ThisWorkbook.AddNewProduct

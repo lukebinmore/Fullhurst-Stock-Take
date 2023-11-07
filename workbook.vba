@@ -30,8 +30,8 @@ Public Sub GetVariables()
     Set sortCell = frontPage.Range("E3")
     Set sortDirectionCell = frontPage.Range("E4")
     Set searchCell = frontPage.Range("B14")
-    minColumnWidth = 20
-    maxColumnWidth = 5
+    minColumnWidth = 3
+    maxColumnWidth = 40
 End Sub
 
 ' Get object from worksheet and return as ListObject
@@ -64,17 +64,18 @@ End Function
 
 ' Set the styles of the page and format the content
 Public Sub SetPageStyle()
-    ' Disable application events to prevent crash
-    Application.EnableEvents = False
+    ' Disable events & screen updating
+    SetScreenEvents(False)
     
     Dim cell As Range
     Dim column As ListColumn
-    Dim windowWidth As Double
     Dim columnCount As Integer
-    Dim fontFactor As Double
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
+
+    ' Get global variables
+    GetVariables
 
     If Not productTable Is Nothing Then
         ' Set table stylings such as text wrapping and autofit
@@ -89,26 +90,22 @@ Public Sub SetPageStyle()
         ' Get the number of columns in the table
         columnCount = productTable.ListColumns.Count
         
-        ' Calculate the font factor to account for the font and font size impact on cell width
-        Set cell = Worksheets(1).Cells(1, 1)
-        fontFactor = cell.Width / cell.ColumnWidth
-        windowWidth = windowWidth / fontFactor
-        
         ' Set autofit on all columns in the table, but then resize larger cells to a max width
         For Each column In productTable.ListColumns
             ' Set alignment of cells content
             column.Range.VerticalAlignment = xlCenter
             column.Range.HorizontalAlignment = xlCenter
-
+            
             ' If column is too large, set it to max
-            If column.DataBodyRange.ColumnWidth > minColumnWidth Then
-                column.DataBodyRange.ColumnWidth = minColumnWidth
-            ElseIf column.DataBodyRange.ColumnWidth < maxColumnWidth Then
-                column.DataBodyRange.ColumnWidth = maxColumnWidth
+            If column.Range.ColumnWidth < minColumnWidth Then
+                column.Range.ColumnWidth = minColumnWidth
+            ElseIf column.Range.ColumnWidth > maxColumnWidth Then
+                column.Range.ColumnWidth = maxColumnWidth
             End If
         Next column
         
         ' Resize the title to fit the new width
+        Set cell = Worksheets(1).Cells(1, 1)
         Range(cell(1, 1), cell(1, columnCount)).Merge Across:=True
         
         ' Re-enable text wrapping
@@ -119,14 +116,14 @@ Public Sub SetPageStyle()
 ErrorHandler:
         ErrorMessage
 
-    ' Re-Enable events
-    Application.EnableEvents = True
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
 End Sub
 
 ' Update product table with new rooms
 Public Sub UpdateProductRooms()
-    ' Disable application events to prevent crash
-    Application.EnableEvents = False
+    ' Disable events & screen updating
+    SetScreenEvents(False)
     
     Dim rooms As Range
     Dim room As Range
@@ -170,20 +167,23 @@ Public Sub UpdateProductRooms()
 ErrorHandler:
         ErrorMessage
 
-    ' Re-Enable events
-    Application.EnableEvents = True
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
 End Sub
 
 ' Sort & Filter options
 Public Sub UpdateDropdowns()
-    ' Disable application events to prevent crash
-    Application.EnableEvents = False
+    ' Disable events & screen updating
+    SetScreenEvents(False)
     
     Dim sortOptions As String
     Dim column As ListColumn
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
+
+    ' Get global variables
+    GetVariables
 
     If Not productTable Is Nothing Then
         ' Remove Existing Sort Options
@@ -204,23 +204,29 @@ Public Sub UpdateDropdowns()
         End If
     End If
 
+    ' Set page style
+    SetPageStyle
+
     ' Provide error message to user
 ErrorHandler:
         ErrorMessage
 
-    ' Re-Enable events
-    Application.EnableEvents = True
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
 End Sub
 
 ' Sort product table
 Public Sub SortProductTable()
-    ' Disable application events to prevent crash
-    Application.EnableEvents = False
+    ' Disable events & screen updating
+    SetScreenEvents(False)
     
     Dim sortDirection As Variant
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
+
+    ' Get global variables
+    GetVariables
 
     ' Identify correct sort order
     If sortDirectionCell.value = "Descending" Then
@@ -237,18 +243,21 @@ Public Sub SortProductTable()
         .Apply
     End With
 
+    ' Set page style
+    SetPageStyle
+
     ' Provide error message to user
 ErrorHandler:
         ErrorMessage
 
-    ' Re-Enable events
-    Application.EnableEvents = True
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
 End Sub
 
 ' Search the product table with text
 Public Sub SearchProductTable()
-    ' Disable application events to prevent crash
-    Application.EnableEvents = False
+    ' Disable events & screen updating
+    SetScreenEvents(False)
 
     Dim searchInput As String
 
@@ -267,18 +276,21 @@ Public Sub SearchProductTable()
         "=*" & searchCell.value & "*", Operator:=xlAnd
     End If
 
+    ' Set page style
+    SetPageStyle
+
     ' Provide error message to user
 ErrorHandler:
         ErrorMessage
 
-    ' Re-Enable events
-    Application.EnableEvents = True
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
 End Sub
 
 ' Add new items to product table
 Public Sub AddNewProduct()
-    ' Disable events to prevent crash
-    Application.EnableEvents = False
+    ' Disable events & screen updating
+    SetScreenEvents(False)
 
     Dim newName, newDesc, newType, newSupplier, newProdCode, newSubject, newCampus, newRoom As String
     Dim newQuantity As Integer
@@ -370,8 +382,8 @@ Public Sub AddNewProduct()
 ErrorHandler:
         ErrorMessage
 
-    ' Re-Enable events
-    Application.EnableEvents = True
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
 End Sub
 
 ' Display error message
@@ -383,10 +395,10 @@ End Sub
 
 ' Reset filters
 Public Sub ResetFilters()
-    ' Disable events to prevent crash
-    Application.EnableEvents = False
+    ' Disable events & screen updating
+    SetScreenEvents(False)
 
-    Dim Column As ListColumn
+    Dim column As ListColumn
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
@@ -397,8 +409,8 @@ Public Sub ResetFilters()
     If Not filterTable Is Nothing Then
         ' Clear all filter values
         For Each column In filterTable.ListColumns
-            filterTable.DataBodyRange.Cells(1, column.Index).Value = ""
-            filterTable.DataBodyRange.Cells(2, column.Index).Value = ""
+            filterTable.DataBodyRange.Cells(1, column.Index).value = ""
+            filterTable.DataBodyRange.Cells(2, column.Index).value = ""
         Next
     End If
 
@@ -409,14 +421,14 @@ Public Sub ResetFilters()
 ErrorHandler:
         ErrorMessage
 
-    ' Re-Enable events
-    Application.EnableEvents = True
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
 End Sub
 
 ' Filter table base on user choices
 Public Sub SetProductFilters()
-    ' Disable events to prevent crash
-    Application.EnableEvents = False
+    ' Disable events & screen updating
+    SetScreenEvents(False)
 
     Dim column As ListColumn
 
@@ -436,7 +448,7 @@ Public Sub SetProductFilters()
         Set newFilterCell = filterTable.DataBodyRange.Cells(1, column.Index)
 
         ' Check if value has been entered into input cell
-        If Not newFilterCell.Value = "" Then
+        If Not newFilterCell.value = "" Then
             Dim filter As Variant
             Dim exists As Boolean
             
@@ -444,23 +456,23 @@ Public Sub SetProductFilters()
             exists = False
 
             ' Check if item already exists in applied filters
-            For Each filter In Split(appliedFilterCell.Value, ",")
-                If filter = newFilterCell.Value Then
+            For Each filter In Split(appliedFilterCell.value, ",")
+                If filter = newFilterCell.value Then
                     exists = True
                 End If
             Next
 
             ' If item is new, add it to filter list
             If Not exists Then
-                If Not AppliedFilterCell.Value = "" Then
-                    AppliedFilterCell.Value = AppliedFilterCell.Value + "," + newFilterCell.Value
+                If Not appliedFilterCell.value = "" Then
+                    appliedFilterCell.value = appliedFilterCell.value + "," + newFilterCell.value
                 Else
-                    AppliedFilterCell.Value = newFilterCell.Value
+                    appliedFilterCell.value = newFilterCell.value
                 End If
             End If
 
             ' Clear input cell
-            newFilterCell.Value = ""
+            newFilterCell.value = ""
         End If
     Next
 
@@ -471,14 +483,14 @@ Public Sub SetProductFilters()
 ErrorHandler:
         ErrorMessage
 
-    ' Re-Enable events
-    Application.EnableEvents = True
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
 End Sub
 
 ' Apply product table filters
 Public Sub ApplyProductFilters()
-    ' Disable events to prevent crash
-    Application.EnableEvents = False
+    ' Disable events & screen updating
+    SetScreenEvents(False)
 
     Dim column As ListColumn
 
@@ -492,12 +504,12 @@ Public Sub ApplyProductFilters()
     For Each column In filterTable.ListColumns
         Dim filtersCell As Range
         Dim filters() As String
-        Dim filter as Variant
+        Dim filter As Variant
         Dim productColumnIndex As Integer
 
         ' Get filters to apply
         Set filtersCell = filterTable.DataBodyRange.Cells(2, column.Index)
-        filters = Split(filtersCell.Value, ",")
+        filters = Split(filtersCell.value, ",")
 
         ' Get product column index to apply filter to
         productColumnIndex = productTable.ListColumns(column.Name).Index
@@ -506,28 +518,88 @@ Public Sub ApplyProductFilters()
         productTable.Range.AutoFilter Field:=productColumnIndex
 
         ' Filter the table with the value in the cell
-        If Not filtersCell.Value = "" Then
+        If Not filtersCell.value = "" Then
             productTable.Range.AutoFilter Field:=productColumnIndex, Criteria1:=filters, Operator:=xlFilterValues
         End If
     Next
+
+    ' Set page style
+    SetPageStyle
 
     ' Provide error message to user
 ErrorHandler:
         ErrorMessage
 
-    ' Re-Enable events
-    Application.EnableEvents = True
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
 End Sub
+
+' Export filtered product data to new file
+Public Sub ExportProductData()
+    ' Disable events & screen updating
+    SetScreenEvents(False)
+
+    Dim newWorkbook As Workbook
+    Dim savePath As String
+    Dim saveFileName As String
+
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
+
+    ' Get global variables
+    GetVariables
+
+    ' Check if table exists
+    If Not productTable Is Nothing Then
+        ' Prompt the user for a save location and file name
+        savePath = Application.GetSaveAsFilename(FileFilter:="Excel Files (*.xlsx), *.xlsx")
+        
+        ' Check if the user canceled the save dialog
+        If savePath <> "False" Then
+            Dim column As ListColumn
+
+            ' Create a new workbook
+            Set newWorkbook = Workbooks.Add
+
+            ' Copy filtered data to new workbook
+            For Each column In productTable.ListColumns
+                column.Range.SpecialCells(xlCellTypeVisible).Copy Destination:=newWorkbook.Worksheets(1).Cells(1, column.Index)
+            Next
+
+            ' Set new workbook stylings
+            With newWorkbook.Worksheets(1)
+                .PageSetup.Orientation = xlLandscape
+                .Cells.WrapText = False
+                .Cells.EntireRow.AutoFit
+                .Cells.EntireColumn.AutoFit
+            End With
+
+            ' Save the new workbook with the user-specified name
+            saveFileName = Mid(savePath, InStrRev(savePath, "\") + 1)
+            newWorkbook.SaveAs savePath
+            newWorkbook.Close SaveChanges:=False
+        End If
+    End If
+
+ErrorHandler:
+    ErrorMessage
+
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
+End Sub
+
+' Enable or disable screen updating and event catching
+Public Sub SetScreenEvents(ByVal state As Boolean)
+    Application.EnableEvents = state
+    Application.ScreenUpdating = state
+End Sub
+
 
 ' Run at launch
 Private Sub Workbook_Open()
-    ' Get global variables
-    GetVariables
-    
-    ' Ensure events are enabled
-    Application.EnableEvents = True
+    ' Ensure events and screen updating are enabled
+    SetScreenEvents(True)
 
     ' Apply page style
     SetPageStyle
 End Sub
-
