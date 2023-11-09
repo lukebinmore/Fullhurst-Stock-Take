@@ -10,7 +10,13 @@ Public roomTable As ListObject
 Public newProductTable As ListObject
 Public sortCell As Range
 Public searchCell As Range
+Public searchFieldCell As Range
 Public sortDirectionCell As Range
+Public filterSection As Range
+Public newProductSection As Range
+Public searchSection As Range
+Public resetButtonCell As Range
+Public addButtonCell As Range
 Public minColumnWidth As Integer
 Public maxColumnWidth As Integer
 
@@ -25,9 +31,15 @@ Public Sub GetVariables()
     Set supplierTable = GetObject(2, "Supplier")
     Set roomTable = GetObject(2, "Room")
     Set newProductTable = GetObject(1, "NewProduct")
-    Set sortCell = frontPage.Range("C3")
-    Set sortDirectionCell = frontPage.Range("D3")
-    Set searchCell = frontPage.Range("B12")
+    Set sortCell = frontPage.Range("C5")
+    Set sortDirectionCell = frontPage.Range("D5")
+    Set searchCell = frontPage.Range("B14")
+    Set searchFieldCell = frontPage.Range("F14")
+    Set filterSection = frontPage.Range("A4:A8").EntireRow
+    Set newProductSection = frontPage.Range("A9:A12").EntireRow
+    Set searchSection = frontPage.Range("A13:A14").EntireRow
+    Set resetButtonCell = frontPage.Range("E7")
+    Set addButtonCell = frontPage.Range("G11")
     minColumnWidth = 3
     maxColumnWidth = 40
 End Sub
@@ -223,20 +235,30 @@ Public Sub SearchProductTable()
     ' Disable events & screen updating
     SetScreenEvents(False)
 
-    Dim searchInput As String
+    Dim searchColumn As Integer
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
 
     ' Get global variables
     GetVariables
+
+    ' Check if search field is empty, set to default if it is
+    If searchFieldCell.Value = "" Then
+        searchFieldCell.Value = "Name"
+    End If
+
+    ' Set column to filter
+    searchColumn = productTable.ListColumns(searchFieldCell.Value).Index
     
     ' Clear previous search filter
     productTable.Range.AutoFilter Field:=1
+    productTable.Range.AutoFilter Field:=2
+    productTable.Range.AutoFilter Field:=5
 
     ' Filter the table with the value in the cell
     If Not searchCell.value = "" Then
-        productTable.Range.AutoFilter Field:=1, Criteria1:= _
+        productTable.Range.AutoFilter Field:=searchColumn, Criteria1:= _
         "=*" & searchCell.value & "*", Operator:=xlAnd
     End If
 
@@ -546,6 +568,109 @@ Public Sub SetScreenEvents(ByVal state As Boolean)
     Application.ScreenUpdating = state
 End Sub
 
+' Hide or show sections
+Public Sub ShowHideSection(ByVal target As String)
+    ' Disable events & screen updating
+    SetScreenEvents(False)
+
+    Dim button As Variant
+    Dim resetButton As Variant
+    DIm addButton As Variant
+    Dim section As Range
+    Dim buttonText() As String
+
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
+
+    ' Get global variables
+    GetVariables
+
+    ' Collect correct section
+    Select Case target
+        Case "BTNHide_Filters"
+            Set section = filterSection
+        Case "BTNHide_New"
+            Set section = newProductSection
+        Case "BTNHide_Search"
+            Set section = searchSection
+    End Select
+
+    ' Set buttons
+    Set button = frontPage.OLEObjects(target).Object
+    Set resetButton = frontPage.OLEObjects("BTNReset")
+    Set addButton = frontPage.OLEObjects("BTNNew")
+    buttonText = Split(button.Caption, " ")
+
+    ' Change button text and set hidden state
+    If section.Hidden = True Then
+        section.Hidden = False
+        button.Caption = "Hide " + buttonText(1)
+    Else
+        section.Hidden = True
+        button.Caption = "Show " + buttonText(1)
+    End If
+
+    ' Fix button placement
+    With resetButton
+        .Visible = True
+        If filterSection.Hidden = True Then
+            .Visible = False
+        End If
+        .Top = resetButtonCell.Top
+        .Left = resetButtonCell.Left
+    End WIth
+    With addButton
+        .Visible = True
+        If newProductSection.Hidden = True Then
+            .Visible = False
+        End If
+        .Top = addButtonCell.Top
+        .Left = addButtonCell.Left
+    End With
+
+ErrorHandler:
+    ErrorMessage
+
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
+End Sub
+
+' Add new rooms to the product table
+Public Sub AddNewRoom()
+    ' Disable events & screen updating
+    SetScreenEvents(False)
+
+    Dim newRow As ListRow
+    Dim newRoomName As String
+
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
+
+    ' Get global variables
+    GetVariables
+
+    ' Get new room name from user
+    newRoomName = InputBox("Please enter the new room number or name. E.G. G101", "Add New Room")
+
+    ' Check if user entered a name
+    If Not newRoomName = "" Then
+        ' Add new room to room table
+        Set newRow = roomTable.ListRows.Add
+        newRow.Range(1) = newRoomName
+
+        ' Update product table on frontPage
+        UpdateProductRooms
+    End If
+
+    ' Re-apply existing table style
+    productTable.TableStyle = productTable.TableStyle
+
+ErrorHandler:
+    ErrorMessage
+
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
+End Sub
 
 ' Run at launch
 Private Sub Workbook_Open()
