@@ -1,6 +1,14 @@
 ' Run when new room button clicked
-Private Sub BTNRoom_Click()
+Private Sub BTNRoom_Add_Click()
     ThisWorkbook.AddNewRoom
+
+    ' Update page style
+    ThisWorkbook.SetPageStyle
+End Sub
+
+' Run when new room button clicked
+Private Sub BTNRoom_Delete_Click()
+    ThisWorkbook.DeleteRoom
 
     ' Update page style
     ThisWorkbook.SetPageStyle

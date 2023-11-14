@@ -201,7 +201,7 @@ Public Sub UpdateProductRooms()
         ' Loop through each room in the table
         For Each room In rooms
             ' Check if the current cell is empty
-            If Not Trim(room.value) = "" Then
+            If Not room.value = "" Then
                 ' Reset the col object & attempt to find new room column
                 Set col = Nothing
                 On Error Resume Next
@@ -334,8 +334,12 @@ End Sub
 
 ' Display error message
 Public Sub ErrorMessage()
+    DIm errorMessage As String
     If Err.Number <> 0 Then
-        MsgBox "Something went wrong, Please try again." & vbCrLf & vbCrLf & "Error:" & vbCrLf & Err.Description
+        errorMessage = "Something went wrong, Please try again." & vbCrlF & vbCrLf
+        errorMessage = errorMessage & "Error: " & Err.Number & vbCrLf & vbCrLf
+        errorMessage = errorMessage & Err.Description
+        MsgBox errorMessage
     End If
 End Sub
 
@@ -556,7 +560,7 @@ Public Sub BackupDatabase()
     ' Get the current date in YYYY-MM-DD format
     dateNow = Format(Now, "YYYY-MM-DD")
 
-    ' Get the current directory and create a new copy of this file
+    ' Get the current directory and create a new path and name for file
     newPath = ThisWorkbook.Path & Application.PathSeparator
     newPath = newPath & "Inventory Database Backup "
     newPath = newPath & dateNow &".xlsm"
@@ -669,6 +673,68 @@ Public Sub AddNewRoom()
 
     ' Re-apply existing table style
     productTable.TableStyle = productTable.TableStyle
+
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
+    Exit Sub
+
+ErrorHandler:
+    ErrorMessage
+End Sub
+
+' Add new rooms to the product table
+Public Sub DeleteRoom()
+    ' Disable events & screen updating
+    SetScreenEvents(False)
+
+    Dim roomName, confirmation As String
+    DIm rowIndex As Integer
+    Dim col As ListColumn
+
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
+
+    ' Get room name from user
+    roomName = InputBox("Please enter the room name you would like to delete. E.G. G101", "Delete Room")
+
+    ' Check if user entered a name
+    If Not roomName = "" Then
+        ' Find room row in room table
+        rowIndex = 0
+        For i = roomTable.ListRows.Count To 1 Step -1
+            If roomName = roomTable.DataBodyRange.Cells(i, 1).Value Then
+                rowIndex = i
+            End If
+        Next
+
+        ' Find room in product table
+        On Error Resume Next
+        Set col = productTable.ListColumns(roomName)
+        On Error GoTo ErrorHandler
+
+        ' Check if room exists in either table
+        If col Is Nothing And rowIndex = 0 Then
+            MsgBox "Error: Room not found!"
+            Exit Sub
+        End If
+
+        ' Confirm user wishes to delete room
+        confirmation = MsgBox("Are you sure you wish to delete " & roomName & "?",vbQuestion + vbYesNo, "Delete Room")
+        
+        ' Delete room if confirmed
+        If confirmation = vbYes Then
+            ' Delete from product table
+            If Not col Is Nothing Then
+                frontPage.Range("A1").UnMerge
+                productTable.ListColumns(roomName).Delete
+            End If
+            
+            ' Delete from room table
+            If Not rowIndex = 0 Then
+                roomTable.ListRows(rowIndex).Delete
+            End If
+        End If
+    End If
 
     ' Re-Enable events & screen updating
     SetScreenEvents(True)
