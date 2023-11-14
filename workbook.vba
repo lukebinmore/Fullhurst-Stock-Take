@@ -562,7 +562,7 @@ Public Sub BackupDatabase()
     ' Disable events & screen updating
     SetScreenEvents(False)
 
-    Dim newPath, dateNow As String
+    Dim defaultFileName, savePath, dateNow As String
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
@@ -570,13 +570,16 @@ Public Sub BackupDatabase()
     ' Get the current date in YYYY-MM-DD format
     dateNow = Format(Now, "YYYY-MM-DD")
 
-    ' Get the current directory and create a new path and name for file
-    newPath = ThisWorkbook.Path & Application.PathSeparator
-    newPath = newPath & "Inventory Database Backup "
-    newPath = newPath & dateNow &".xlsm"
+    ' Contruct default file name
+    defaultFileName = "Inventory Tracker Backup " & dateNow
 
-    ' Save new file
-    ThisWorkbook.SaveCopyAs Filename:=newPath
+    ' Get save directory and confirm file name from user
+    savePath = Application.GetSaveAsFilename(InitialFileName:=defaultFileName, FileFilter:="Excel Macro-Enabled Workbook (*.xlsm), *.xlsm")
+
+    ' Save the file if a path was entered
+    If savePath <> "False" Then
+        ThisWorkbook.SaveCopyAs Filename:=savePath
+    End If
 
     ' Re-Enable events & screen updating
     SetScreenEvents(True)
