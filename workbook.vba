@@ -84,9 +84,6 @@ Public Sub SetPageStyle()
     ' Enable error handeling
     On Error GoTo ErrorHandler
 
-    ' Get global variables
-    GetVariables
-
     If Not productTable Is Nothing Then
         ' Set table stylings such as text wrapping and autofit
         With frontPage.Cells.SpecialCells(xlCellTypeVisible)
@@ -101,7 +98,7 @@ Public Sub SetPageStyle()
 
         ' Set the size of the page title
         frontPage.Range("A1").UnMerge
-        frontPage.Range(Cells(1, 1), Cells(1, productTable.ListColumns.Count)).Merge
+        frontPage.Range("A1", frontPage.Cells(1, productTable.ListColumns.Count)).Merge
 
         ' Get the number of columns in the table
         columnCount = productTable.ListColumns.Count
@@ -132,12 +129,57 @@ Public Sub SetPageStyle()
         productTable.Range.WrapText = True
     End If
 
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
+    Exit Sub
+
     ' Provide error message to user
 ErrorHandler:
         ErrorMessage
+End Sub
+
+' Update database tables
+Public Sub UpdateDatabaseTables()
+    ' Disable events & screen updating
+    SetScreenEvents(False)
+
+    Dim table As ListObject
+
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
+
+    ' Loop through tables in database sheet
+    For Each table In filterDatabase.ListObjects
+        ' Skip Room table
+        If Not table.Name = "Room" Then
+            Dim cell As Range
+            Dim lastCell As Range
+            Dim emptyCellsCleared As Boolean
+
+            ' Loop through each row in the table
+            For i = table.ListRows.Count To 1 Step -1
+                ' Get last cell in table column
+                Set lastCell = table.DataBodyRange.Cells(table.ListRows.Count, 1)
+
+                ' Add row if not exmpty cell in last row, delete other empty cells
+                With table.Cells(i, 1)
+                    If Not .Value = "" And lastCell.Address = .Address Then
+                        table.ListRows.Add
+                    ElseIf .Value = "" Then
+                        table.ListRows(i).Delete
+                    End If
+                End With
+            Next
+        End If
+    Next
 
     ' Re-Enable events & screen updating
     SetScreenEvents(True)
+    Exit Sub
+
+    ' Provide error message to user
+ErrorHandler:
+    ErrorMessage
 End Sub
 
 ' Update product table with new rooms
@@ -151,9 +193,6 @@ Public Sub UpdateProductRooms()
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
-
-    ' Get global variables
-    GetVariables
 
     If Not roomTable Is Nothing And Not productTable Is Nothing Then
         ' Get rooms from table of rooms
@@ -179,16 +218,14 @@ Public Sub UpdateProductRooms()
             End If
         Next
     End If
-    
-    ' Resize the product table
-    SetPageStyle
+
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
+    Exit Sub
 
     ' Provide error message to user
 ErrorHandler:
         ErrorMessage
-
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
 End Sub
 
 ' Sort product table
@@ -200,9 +237,6 @@ Public Sub SortProductTable()
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
-
-    ' Get global variables
-    GetVariables
 
     ' Identify correct sort order
     If sortDirectionCell.value = "Descending" Then
@@ -219,15 +253,13 @@ Public Sub SortProductTable()
         .Apply
     End With
 
-    ' Set page style
-    SetPageStyle
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
+    Exit Sub
 
     ' Provide error message to user
 ErrorHandler:
         ErrorMessage
-
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
 End Sub
 
 ' Search the product table with text
@@ -239,9 +271,6 @@ Public Sub SearchProductTable()
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
-
-    ' Get global variables
-    GetVariables
 
     ' Check if search field is empty, set to default if it is
     If searchFieldCell.Value = "" Then
@@ -262,15 +291,13 @@ Public Sub SearchProductTable()
         "=*" & searchCell.value & "*", Operator:=xlAnd
     End If
 
-    ' Set page style
-    SetPageStyle
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
+    Exit Sub
 
     ' Provide error message to user
 ErrorHandler:
         ErrorMessage
-
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
 End Sub
 
 ' Add new items to product table
@@ -278,72 +305,37 @@ Public Sub AddNewProduct()
     ' Disable events & screen updating
     SetScreenEvents(False)
 
-    Dim newName, newDesc, newType, newSupplier, newProdCode, newCampus As String
     Dim newRow As ListRow
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
 
-    ' Get Variables
-    GetVariables
+    ' Add new row
+    Set newRow = productTable.ListRows.Add(1)
 
     ' Get data from table
     With newProductTable.DataBodyRange
-        newName = .Cells(1, 1)
-        newDesc = .Cells(1, 2)
-        newType = .Cells(1, 3)
-        newSupplier = .Cells(1, 4)
-        newProdCode = .Cells(1, 5)
-        newCampus = .Cells(1, 6)
+        newRow.Range(1) = .Cells(1, 1)
+        newRow.Range(2) = .Cells(1, 2)
+        newRow.Range(3) = .Cells(1, 3)
+        newRow.Range(4) = .Cells(1, 4)
+        newRow.Range(5) = .Cells(1, 5)
+        newRow.Range(6) = .Cells(1, 6)
     End With
 
-    ' Check if type exists, add it to table if it doesn't
-    If Not CheckValueExists(newType, typeTable) And Not newType = "" Then
-        Dim typeRow As ListRow
-        Set typeRow = typeTable.ListRows.Add
-        typeRow.Range(1) = newType
-    End If
-
-    ' Check if supplier exists, add it to table if it doesn't
-    If Not CheckValueExists(newSupplier, supplierTable) And Not newSupplier = "" Then
-        Dim supplierRow As ListRow
-        Set supplierRow = supplierTable.ListRows.Add
-        supplierRow.Range(1) = newSupplier
-    End If
-
-    ' Check if campus exists, add it to table if it doesn't
-    If Not CheckValueExists(newCampus, campusTable) And Not newCampus = "" Then
-        Dim campusRow As ListRow
-        Set campusRow = campusTable.ListRows.Add
-        campusRow.Range(1) = newCampus
-    End If
-
-    ' Add new row
-    Set newRow = productTable.ListRows.Add(1)
-    With newRow
-        .Range(1) = newName
-        .Range(2) = newDesc
-        .Range(3) = newType
-        .Range(4) = newSupplier
-        .Range(5) = newProdCode
-        .Range(6) = newCampus
-    End With
-
-    ' Refresh stylin
-    SetPageStyle
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
+    Exit Sub
 
     ' Provide error message to user
 ErrorHandler:
         ErrorMessage
-
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
 End Sub
 
 ' Display error message
 Public Sub ErrorMessage()
     If Err.Number <> 0 Then
-        MsgBox "Something went wrong, Please try again"
+        MsgBox "Something went wrong, Please try again." & vbCrLf & vbCrLf & "Error:" & vbCrLf & Err.Description
     End If
 End Sub
 
@@ -357,9 +349,6 @@ Public Sub ResetFilters()
     ' Enable error handeling
     On Error GoTo ErrorHandler
 
-    ' Get global variables
-    GetVariables
-
     If Not filterTable Is Nothing Then
         ' Clear all filter values
         For Each column In filterTable.ListColumns
@@ -371,12 +360,13 @@ Public Sub ResetFilters()
     ' Apply new filters to product table
     ApplyProductFilters
 
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
+    Exit Sub
+
     ' Provide error message to user
 ErrorHandler:
         ErrorMessage
-
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
 End Sub
 
 ' Filter table base on user choices
@@ -388,9 +378,6 @@ Public Sub SetProductFilters()
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
-
-    ' Get global variables
-    GetVariables
 
     ' Complete checks for each column in filter table
     For Each column In filterTable.ListColumns
@@ -433,12 +420,13 @@ Public Sub SetProductFilters()
     ' Apply new filters
     ApplyProductFilters
 
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
+    Exit Sub
+
     ' Provide error message to user
 ErrorHandler:
         ErrorMessage
-
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
 End Sub
 
 ' Apply product table filters
@@ -450,9 +438,6 @@ Public Sub ApplyProductFilters()
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
-
-    ' Get global variables
-    GetVariables
 
     ' Complete checks for each column in filter table
     For Each column In filterTable.ListColumns
@@ -492,15 +477,13 @@ Public Sub ApplyProductFilters()
         End If
     Next
 
-    ' Set page style
-    SetPageStyle
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
+    Exit Sub
 
     ' Provide error message to user
 ErrorHandler:
         ErrorMessage
-
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
 End Sub
 
 ' Export filtered product data to new file
@@ -514,9 +497,6 @@ Public Sub ExportProductData()
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
-
-    ' Get global variables
-    GetVariables
 
     ' Check if table exists
     If Not productTable Is Nothing Then
@@ -555,11 +535,41 @@ Public Sub ExportProductData()
         End If
     End If
 
+    ' Re-Enable events & screen updating
+    SetScreenEvents(True)
+    Exit Sub
+
 ErrorHandler:
     ErrorMessage
+End Sub
+
+' Backup database to new file
+Public Sub BackupDatabase()
+    ' Disable events & screen updating
+    SetScreenEvents(False)
+
+    Dim newPath, dateNow As String
+
+    ' Enable error handeling
+    On Error GoTo ErrorHandler
+
+    ' Get the current date in YYYY-MM-DD format
+    dateNow = Format(Now, "YYYY-MM-DD")
+
+    ' Get the current directory and create a new copy of this file
+    newPath = ThisWorkbook.Path & Application.PathSeparator
+    newPath = newPath & "Inventory Database Backup "
+    newPath = newPath & dateNow &".xlsm"
+
+    ' Save new file
+    ThisWorkbook.SaveCopyAs Filename:=newPath
 
     ' Re-Enable events & screen updating
     SetScreenEvents(True)
+    Exit Sub
+
+ErrorHandler:
+    ErrorMessage
 End Sub
 
 ' Enable or disable screen updating and event catching
@@ -581,9 +591,6 @@ Public Sub ShowHideSection(ByVal target As String)
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
-
-    ' Get global variables
-    GetVariables
 
     ' Collect correct section
     Select Case target
@@ -628,11 +635,12 @@ Public Sub ShowHideSection(ByVal target As String)
         .Left = addButtonCell.Left
     End With
 
-ErrorHandler:
-    ErrorMessage
-
     ' Re-Enable events & screen updating
     SetScreenEvents(True)
+    Exit Sub
+
+ErrorHandler:
+    ErrorMessage
 End Sub
 
 ' Add new rooms to the product table
@@ -645,9 +653,6 @@ Public Sub AddNewRoom()
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
-
-    ' Get global variables
-    GetVariables
 
     ' Get new room name from user
     newRoomName = InputBox("Please enter the new room number or name. E.G. G101", "Add New Room")
@@ -665,17 +670,24 @@ Public Sub AddNewRoom()
     ' Re-apply existing table style
     productTable.TableStyle = productTable.TableStyle
 
-ErrorHandler:
-    ErrorMessage
-
     ' Re-Enable events & screen updating
     SetScreenEvents(True)
+    Exit Sub
+
+ErrorHandler:
+    ErrorMessage
 End Sub
 
 ' Run at launch
 Private Sub Workbook_Open()
     ' Ensure events and screen updating are enabled
     SetScreenEvents(True)
+
+    ' Get global variables
+    GetVariables
+
+    ' Update database tables
+    UpdateDatabaseTables
 
     ' Sort product table
     SortProductTable
