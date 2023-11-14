@@ -162,7 +162,7 @@ Public Sub UpdateDatabaseTables()
                 Set lastCell = table.DataBodyRange.Cells(table.ListRows.Count, 1)
 
                 ' Add row if not exmpty cell in last row, delete other empty cells
-                With table.Cells(i, 1)
+                With table.DataBodyRange.Cells(i, 1)
                     If Not .Value = "" And lastCell.Address = .Address Then
                         table.ListRows.Add
                     ElseIf .Value = "" Then
@@ -170,6 +170,11 @@ Public Sub UpdateDatabaseTables()
                     End If
                 End With
             Next
+
+            ' Insert single cell if table is empty
+            If table.ListRows.Count = 0 Then
+                table.ListRows.Add
+            End If
         End If
     Next
 
@@ -311,7 +316,11 @@ Public Sub AddNewProduct()
     On Error GoTo ErrorHandler
 
     ' Add new row
-    Set newRow = productTable.ListRows.Add(1)
+    If productTable.ListRows.Count = 0 Then
+        Set newRow = productTable.ListRows.Add
+    Else
+        Set newRow = productTable.ListRows.Add(1)
+    End If
 
     ' Get data from table
     With newProductTable.DataBodyRange
