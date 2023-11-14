@@ -470,8 +470,9 @@ Public Sub ApplyProductFilters()
 
             ' Hide the columns based on the value of the cell
             If Not filtersCell.Value = "" Then
-                For Each room In roomTable.ListColumns(1).Range
+                For Each room In roomTable.ListColumns(1).DataBodyRange
                     If Not (UBound(Filter(filters, room.Value)) > -1) Then
+                        frontPage.Range("A1").UnMerge
                         productTable.ListColumns(room.Value).Range.EntireColumn.Hidden = True
                     End If
                 Next
