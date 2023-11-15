@@ -39,12 +39,12 @@ Public Sub GetVariables()
 End Sub
 
 ' Get object from worksheet and return as ListObject
-Public Function GetObject(workbook As Integer, objectName As String) As ListObject
+Public Function GetObject(Workbook As Integer, objectName As String) As ListObject
     Dim object As ListObject
 
     ' Attempt to find the table by it's name
     On Error Resume Next
-    Set object = ThisWorkbook.Worksheets(workbook).ListObjects(objectName)
+    Set object = ThisWorkbook.Worksheets(Workbook).ListObjects(objectName)
     On Error GoTo 0
 
     ' Check ig the table was found. Give error if not, otherwise return ListObject
@@ -104,55 +104,30 @@ Public Sub SetPageStyle()
 
     ' Provide error message to user
 ErrorHandler:
-        ErrorMessage
+        errorMessage
 End Sub
 
 ' Update database tables
 Public Sub UpdateDatabaseTables()
-    Dim table As ListObject
+    Dim table As PivotTable
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
-
-    ' Loop through tables in database sheet
-    For Each table In filterDatabase.ListObjects
-        ' Skip Room table
-        If Not table.Name = "Room" Then
-            Dim cell As Range
-            Dim lastCell As Range
-            Dim emptyCellsCleared As Boolean
-
-            ' Loop through each row in the table
-            For i = table.ListRows.Count To 1 Step -1
-                ' Get last cell in table column
-                Set lastCell = table.DataBodyRange.Cells(table.ListRows.Count, 1)
-
-                ' Add row if not exmpty cell in last row, delete other empty cells
-                With table.DataBodyRange.Cells(i, 1)
-                    If Not .Value = "" And lastCell.Address = .Address Then
-                        table.ListRows.Add
-                    ElseIf .Value = "" Then
-                        table.ListRows(i).Delete
-                    End If
-                End With
-            Next
-
-            ' Insert single cell if table is empty
-            If table.ListRows.Count = 0 Then
-                table.ListRows.Add
-            End If
-        End If
+    
+    ' Refresh all the pivot tables in the sheet
+    For Each table In filterDatabase.PivotTables
+        table.RefreshTable
     Next
 
     Exit Sub
 
     ' Provide error message to user
 ErrorHandler:
-    ErrorMessage
+    errorMessage
 End Sub
 
 ' Update product table with new rooms
-Public Sub UpdateProductRooms()    
+Public Sub UpdateProductRooms()
     Dim rooms As Range
     Dim room As Range
     Dim col As ListColumn
@@ -192,11 +167,11 @@ Public Sub UpdateProductRooms()
 
     ' Provide error message to user
 ErrorHandler:
-        ErrorMessage
+        errorMessage
 End Sub
 
 ' Sort product table
-Public Sub SortProductTable()    
+Public Sub SortProductTable()
     Dim sortDirection As Variant
 
     ' Enable error handeling
@@ -221,7 +196,7 @@ Public Sub SortProductTable()
 
     ' Provide error message to user
 ErrorHandler:
-        ErrorMessage
+        errorMessage
 End Sub
 
 ' Search the product table with text
@@ -232,12 +207,12 @@ Public Sub SearchProductTable()
     On Error GoTo ErrorHandler
 
     ' Check if search field is empty, set to default if it is
-    If searchFieldCell.Value = "" Then
-        searchFieldCell.Value = "Name"
+    If searchFieldCell.value = "" Then
+        searchFieldCell.value = "Name"
     End If
 
     ' Set column to filter
-    searchColumn = productTable.ListColumns(searchFieldCell.Value).Index
+    searchColumn = productTable.ListColumns(searchFieldCell.value).Index
     
     ' Clear previous search filter
     productTable.Range.AutoFilter Field:=productTable.ListColumns("Name").Index
@@ -254,7 +229,7 @@ Public Sub SearchProductTable()
 
     ' Provide error message to user
 ErrorHandler:
-        ErrorMessage
+        errorMessage
 End Sub
 
 ' Add new items to product table
@@ -281,14 +256,14 @@ Public Sub AddNewProduct()
 
     ' Provide error message to user
 ErrorHandler:
-        ErrorMessage
+        errorMessage
 End Sub
 
 ' Display error message
-Public Sub ErrorMessage()
-    DIm errorMessage As String
+Public Sub errorMessage()
+    Dim errorMessage As String
     If Err.Number <> 0 Then
-        errorMessage = "Something went wrong, Please try again." & vbCrlF & vbCrLf
+        errorMessage = "Something went wrong, Please try again." & vbCrLf & vbCrLf
         errorMessage = errorMessage & "Error: " & Err.Number & vbCrLf & vbCrLf
         errorMessage = errorMessage & Err.Description
         MsgBox errorMessage
@@ -315,7 +290,7 @@ Public Sub ResetFilters()
 
     ' Provide error message to user
 ErrorHandler:
-        ErrorMessage
+        errorMessage
 End Sub
 
 ' Filter table base on user choices
@@ -370,7 +345,7 @@ Public Sub SetProductFilters()
 
     ' Provide error message to user
 ErrorHandler:
-        ErrorMessage
+        errorMessage
 End Sub
 
 ' Apply product table filters
@@ -390,17 +365,24 @@ Public Sub ApplyProductFilters()
         ' Get filters to apply
         Set filtersCell = filterTable.DataBodyRange.Cells(2, column.Index)
         filters = Split(filtersCell.value, ",")
+        
+        ' Replace word blank with correct filter term
+        For i = LBound(filters) To UBound(filters)
+            If filters(i) = "(blank)" Then
+                filters(i) = "="
+            End If
+        Next
 
         ' Check if filtering rooms
         If column.Name = "Room" Then
             ' Show all columns
-            Columns.Entirecolumn.Hidden = False
+            Columns.EntireColumn.Hidden = False
 
             ' Hide the columns based on the value of the cell
-            If Not filtersCell.Value = "" Then
+            If Not filtersCell.value = "" Then
                 For Each room In roomTable.ListColumns(1).DataBodyRange
-                    If Not (UBound(Filter(filters, room.Value)) > -1) Then
-                        productTable.ListColumns(room.Value).Range.EntireColumn.Hidden = True
+                    If Not (UBound(filter(filters, room.value)) > -1) Then
+                        productTable.ListColumns(room.value).Range.EntireColumn.Hidden = True
                     End If
                 Next
             End If
@@ -412,7 +394,7 @@ Public Sub ApplyProductFilters()
             productTable.Range.AutoFilter Field:=productColumnIndex
 
             ' Filter the table with the value in the cell
-            If Not filtersCell.Value = "" Then
+            If Not filtersCell.value = "" Then
                 productTable.Range.AutoFilter Field:=productColumnIndex, Criteria1:=filters, Operator:=xlFilterValues
             End If
         End If
@@ -422,7 +404,7 @@ Public Sub ApplyProductFilters()
 
     ' Provide error message to user
 ErrorHandler:
-        ErrorMessage
+        errorMessage
 End Sub
 
 ' Export filtered product data to new file
@@ -471,7 +453,7 @@ Public Sub ExportProductData()
     Exit Sub
 
 ErrorHandler:
-    ErrorMessage
+    errorMessage
 End Sub
 
 ' Backup database to new file
@@ -498,7 +480,7 @@ Public Sub BackupDatabase()
     Exit Sub
 
 ErrorHandler:
-    ErrorMessage
+    errorMessage
 End Sub
 
 ' Enable or disable screen updating and event catching
@@ -511,7 +493,7 @@ End Sub
 Public Sub ShowHideSection(ByVal target As String)
     Dim button As Variant
     Dim resetButton As Variant
-    DIm addButton As Variant
+    Dim addButton As Variant
     Dim section As Range
     Dim buttonText() As String
 
@@ -529,7 +511,7 @@ Public Sub ShowHideSection(ByVal target As String)
     End Select
 
     ' Set buttons
-    Set button = frontPage.OLEObjects(target).Object
+    Set button = frontPage.OLEObjects(target).object
     Set resetButton = frontPage.OLEObjects("BTNReset")
     Set addButton = frontPage.OLEObjects("BTNNew")
     buttonText = Split(button.Caption, " ")
@@ -551,7 +533,7 @@ Public Sub ShowHideSection(ByVal target As String)
         End If
         .Top = resetButtonCell.Top
         .Left = resetButtonCell.Left
-    End WIth
+    End With
     With addButton
         .Visible = True
         If newProductSection.Hidden = True Then
@@ -564,7 +546,7 @@ Public Sub ShowHideSection(ByVal target As String)
     Exit Sub
 
 ErrorHandler:
-    ErrorMessage
+    errorMessage
 End Sub
 
 ' Add new rooms to the product table
@@ -593,14 +575,15 @@ Public Sub AddNewRoom()
 
     Exit Sub
 
+
 ErrorHandler:
-    ErrorMessage
+    errorMessage
 End Sub
 
 ' Add new rooms to the product table
 Public Sub DeleteRoom()
     Dim roomName, confirmation As String
-    DIm rowIndex As Integer
+    Dim rowIndex As Integer
     Dim col As ListColumn
 
     ' Enable error handeling
@@ -614,7 +597,7 @@ Public Sub DeleteRoom()
         ' Find room row in room table
         rowIndex = 0
         For i = roomTable.ListRows.Count To 1 Step -1
-            If roomName = roomTable.DataBodyRange.Cells(i, 1).Value Then
+            If roomName = roomTable.DataBodyRange.Cells(i, 1).value Then
                 rowIndex = i
             End If
         Next
@@ -631,7 +614,7 @@ Public Sub DeleteRoom()
         End If
 
         ' Confirm user wishes to delete room
-        confirmation = MsgBox("Are you sure you wish to delete " & roomName & "?",vbQuestion + vbYesNo, "Delete Room")
+        confirmation = MsgBox("Are you sure you wish to delete " & roomName & "?", vbQuestion + vbYesNo, "Delete Room")
         
         ' Delete room if confirmed
         If confirmation = vbYes Then
@@ -650,13 +633,13 @@ Public Sub DeleteRoom()
     Exit Sub
 
 ErrorHandler:
-    ErrorMessage
+    errorMessage
 End Sub
 
 ' Wrapper sub to disbale screen updating
 Public Sub Wrap(subName As String, ParamArray args() As Variant)
     ' Disable events and screen updating
-    SetScreenEvents(False)
+    SetScreenEvents (False)
 
     ' Check if variables are available
     If frontPage Is Nothing Then
@@ -671,13 +654,13 @@ Public Sub Wrap(subName As String, ParamArray args() As Variant)
     End If
 
     ' Disable events and screen updating
-    SetScreenEvents(True)
+    SetScreenEvents (True)
 End Sub
 
 ' Run at launch
 Private Sub Workbook_Open()
     ' Disable events and screen udpating
-    SetScreenEvents(false)
+    SetScreenEvents (False)
 
     ' Get global variables
     GetVariables
@@ -692,5 +675,5 @@ Private Sub Workbook_Open()
     SetPageStyle
 
     ' Enable events and screen updating
-    SetScreenEvents(True)
+    SetScreenEvents (True)
 End Sub

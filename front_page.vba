@@ -42,7 +42,7 @@ End Sub
 
 ' Run when show/hide search button clicked
 Private Sub BTNHide_Search_Click()
-    ThisWorkbook.Wrap "ShowHideSection". "BTNHide_Search"
+    ThisWorkbook.Wrap "ShowHideSection", "BTNHide_Search"
 
     ' Update page style
     ThisWorkbook.Wrap "SetPageStyle"
@@ -50,7 +50,7 @@ End Sub
 
 ' Run when add new product button clicked
 Private Sub BTNNew_Click()
-    ThisWorkbook.Wrap "AddNewProduct"
+    ThisWorkbook.Wrap ("AddNewProduct")
 
     ' Update databases
     ThisWorkbook.Wrap "UpdateDatabaseTables"
@@ -68,13 +68,13 @@ Private Sub BTNReset_Click()
 End Sub
 
 ' Run on change in sheet
-Private Sub Worksheet_Change(ByVal Target As Range)
+Private Sub Worksheet_Change(ByVal target As Range)
     With ThisWorkbook
         ' Get global variables in workbook
         .GetVariables
 
         ' Check what cell was targeted
-        Select Case Target.Address
+        Select Case target.Address
         Case .sortCell.Address, .sortDirectionCell.Address
             .Wrap "SortProductTable"
         Case .searchCell.Address, .searchFieldCell.Address
@@ -83,11 +83,18 @@ Private Sub Worksheet_Change(ByVal Target As Range)
 
         ' Check if cell triggered was in filter table
         If Not .filterTable Is Nothing Then
-            If Not Intersect(.filterTable.DataBodyRange, Range(Target.Address)) Is Nothing Then
+            If Not Intersect(.filterTable.DataBodyRange, Range(target.Address)) Is Nothing Then
                 .Wrap "SetProductFilters"
             End If
         End If
-
+        
+        ' Check if cell was triggered in product table
+        If Not .productTable.DataBodyRange Is Nothing Then
+            If Not Intersect(.productTable.DataBodyRange, Range(target.Address)) Is Nothing Then
+                .Wrap "UpdatedatabaseTables"
+            End If
+        End If
+        
         ' Update sheet style
         .Wrap "SetPageStyle"
     End With
