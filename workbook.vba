@@ -28,7 +28,7 @@ Public Sub GetVariables()
     Set sortCell = frontPage.Range("C5")
     Set sortDirectionCell = frontPage.Range("D5")
     Set searchCell = frontPage.Range("B14")
-    Set searchFieldCell = frontPage.Range("F14")
+    Set searchFieldCell = frontPage.Range("H14")
     Set filterSection = frontPage.Range("A4:A8").EntireRow
     Set newProductSection = frontPage.Range("A9:A12").EntireRow
     Set searchSection = frontPage.Range("A13:A14").EntireRow
@@ -59,7 +59,6 @@ End Function
 
 ' Set the styles of the page and format the content
 Public Sub SetPageStyle()
-    Dim cell As Range
     Dim column As ListColumn
     Dim columnCount As Integer
 
@@ -76,10 +75,6 @@ Public Sub SetPageStyle()
 
     ' Change scroll limit of the page to fit the table
     frontPage.ScrollArea = "A:" + Split(Cells(1, productTable.ListColumns.Count).Address, "$")(1)
-
-    ' Set the size of the page title
-    frontPage.Range("A1").UnMerge
-    frontPage.Range("A1", frontPage.Cells(1, productTable.ListColumns.Count)).Merge
 
     ' Get the number of columns in the table
     columnCount = productTable.ListColumns.Count
@@ -101,10 +96,6 @@ Public Sub SetPageStyle()
             End With
         End If
     Next column
-    
-    ' Resize the title to fit the new width
-    Set cell = frontPage.Cells(1, 1)
-    Range(cell(1, 1), cell(1, columnCount)).Merge Across:=True
     
     ' Re-enable text wrapping
     productTable.Range.WrapText = True
@@ -171,6 +162,11 @@ Public Sub UpdateProductRooms()
 
     ' Get rooms from table of rooms
     Set rooms = roomTable.ListColumns(1).DataBodyRange
+
+    ' Exit early if no rooms have been entered yet
+    If rooms Is Nothing Then
+        Exit Sub
+    End If
     
     ' Loop through each room in the table
     For Each room In rooms
@@ -244,9 +240,9 @@ Public Sub SearchProductTable()
     searchColumn = productTable.ListColumns(searchFieldCell.Value).Index
     
     ' Clear previous search filter
-    productTable.Range.AutoFilter Field:=1
-    productTable.Range.AutoFilter Field:=2
-    productTable.Range.AutoFilter Field:=5
+    productTable.Range.AutoFilter Field:=productTable.ListColumns("Name").Index
+    productTable.Range.AutoFilter Field:=productTable.ListColumns("Description").Index
+    productTable.Range.AutoFilter Field:=productTable.ListColumns("Product Code").Index
 
     ' Filter the table with the value in the cell
     If Not searchCell.value = "" Then
@@ -404,7 +400,6 @@ Public Sub ApplyProductFilters()
             If Not filtersCell.Value = "" Then
                 For Each room In roomTable.ListColumns(1).DataBodyRange
                     If Not (UBound(Filter(filters, room.Value)) > -1) Then
-                        frontPage.Range("A1").UnMerge
                         productTable.ListColumns(room.Value).Range.EntireColumn.Hidden = True
                     End If
                 Next
@@ -642,7 +637,6 @@ Public Sub DeleteRoom()
         If confirmation = vbYes Then
             ' Delete from product table
             If Not col Is Nothing Then
-                frontPage.Range("A1").UnMerge
                 productTable.ListColumns(roomName).Delete
             End If
             
@@ -663,6 +657,11 @@ End Sub
 Public Sub Wrap(subName As String, ParamArray args() As Variant)
     ' Disable events and screen updating
     SetScreenEvents(False)
+
+    ' Check if variables are available
+    If frontPage Is Nothing Then
+        GetVariables
+    End If
 
     ' Run provided sub or function with or without arguments
     If IsMissing(args) Then
