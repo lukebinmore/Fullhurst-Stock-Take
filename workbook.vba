@@ -3,9 +3,6 @@ Public frontPage As Worksheet
 Public filterDatabase As Worksheet
 Public productTable As ListObject
 Public filterTable As ListObject
-Public campusTable As ListObject
-Public typeTable As ListObject
-Public supplierTable As ListObject
 Public roomTable As ListObject
 Public newProductTable As ListObject
 Public sortCell As Range
@@ -26,9 +23,6 @@ Public Sub GetVariables()
     Set filterDatabase = ThisWorkbook.Worksheets(2)
     Set productTable = GetObject(1, "Product")
     Set filterTable = GetObject(1, "Filter")
-    Set campusTable = GetObject(2, "Campus")
-    Set typeTable = GetObject(2, "Type")
-    Set supplierTable = GetObject(2, "Supplier")
     Set roomTable = GetObject(2, "Room")
     Set newProductTable = GetObject(1, "NewProduct")
     Set sortCell = frontPage.Range("C5")
@@ -38,19 +32,19 @@ Public Sub GetVariables()
     Set filterSection = frontPage.Range("A4:A8").EntireRow
     Set newProductSection = frontPage.Range("A9:A12").EntireRow
     Set searchSection = frontPage.Range("A13:A14").EntireRow
-    Set resetButtonCell = frontPage.Range("E7")
-    Set addButtonCell = frontPage.Range("G11")
+    Set resetButtonCell = frontPage.Range("F7")
+    Set addButtonCell = frontPage.Range("H11")
     minColumnWidth = 3
     maxColumnWidth = 40
 End Sub
 
 ' Get object from worksheet and return as ListObject
-Public Function GetObject(Workbook As Integer, objectName As String) As ListObject
+Public Function GetObject(workbook As Integer, objectName As String) As ListObject
     Dim object As ListObject
 
     ' Attempt to find the table by it's name
     On Error Resume Next
-    Set object = ThisWorkbook.Worksheets(Workbook).ListObjects(objectName)
+    Set object = ThisWorkbook.Worksheets(workbook).ListObjects(objectName)
     On Error GoTo 0
 
     ' Check ig the table was found. Give error if not, otherwise return ListObject
@@ -63,20 +57,8 @@ Public Function GetObject(Workbook As Integer, objectName As String) As ListObje
     End If
 End Function
 
-' Check value exists in table
-Public Function CheckValueExists(ByVal value As String, ByVal table As ListObject)
-    If IsError(Application.Match(value, table.ListColumns(1).DataBodyRange, 0)) Then
-        CheckValueExists = False
-    Else
-        CheckValueExists = True
-    End If
-End Function
-
 ' Set the styles of the page and format the content
 Public Sub SetPageStyle()
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-    
     Dim cell As Range
     Dim column As ListColumn
     Dim columnCount As Integer
@@ -84,53 +66,49 @@ Public Sub SetPageStyle()
     ' Enable error handeling
     On Error GoTo ErrorHandler
 
-    If Not productTable Is Nothing Then
-        ' Set table stylings such as text wrapping and autofit
-        With frontPage.Cells.SpecialCells(xlCellTypeVisible)
-            .WrapText = False
-            .EntireColumn.AutoFit
-            .EntireRow.AutoFit
-            productTable.ShowAutoFilterDropDown = False
-        End With
+    ' Set table stylings such as text wrapping and autofit
+    With frontPage.Cells.SpecialCells(xlCellTypeVisible)
+        .WrapText = False
+        .EntireColumn.AutoFit
+        .EntireRow.AutoFit
+        productTable.ShowAutoFilterDropDown = False
+    End With
 
-        ' Change scroll limit of the page to fit the table
-        frontPage.ScrollArea = "A:" + Split(Cells(1, productTable.ListColumns.Count).Address, "$")(1)
+    ' Change scroll limit of the page to fit the table
+    frontPage.ScrollArea = "A:" + Split(Cells(1, productTable.ListColumns.Count).Address, "$")(1)
 
-        ' Set the size of the page title
-        frontPage.Range("A1").UnMerge
-        frontPage.Range("A1", frontPage.Cells(1, productTable.ListColumns.Count)).Merge
+    ' Set the size of the page title
+    frontPage.Range("A1").UnMerge
+    frontPage.Range("A1", frontPage.Cells(1, productTable.ListColumns.Count)).Merge
 
-        ' Get the number of columns in the table
-        columnCount = productTable.ListColumns.Count
+    ' Get the number of columns in the table
+    columnCount = productTable.ListColumns.Count
+    
+    ' Set autofit on all columns in the table, but then resize larger cells to a max width
+    For Each column In productTable.ListColumns
+        ' Set alignment of cells content
+        column.Range.VerticalAlignment = xlCenter
+        column.Range.HorizontalAlignment = xlCenter
         
-        ' Set autofit on all columns in the table, but then resize larger cells to a max width
-        For Each column In productTable.ListColumns
-            ' Set alignment of cells content
-            column.Range.VerticalAlignment = xlCenter
-            column.Range.HorizontalAlignment = xlCenter
-            
-            ' If column is too large, set it to max
-            If Not column.Range.EntireColumn.Hidden = True Then
-                With column.Range
-                    If .ColumnWidth < minColumnWidth Then
-                        .ColumnWidth = minColumnWidth
-                    ElseIf .ColumnWidth > maxColumnWidth Then
-                        .ColumnWidth = maxColumnWidth
-                    End If
-                End With
-            End If
-        Next column
-        
-        ' Resize the title to fit the new width
-        Set cell = frontPage.Cells(1, 1)
-        Range(cell(1, 1), cell(1, columnCount)).Merge Across:=True
-        
-        ' Re-enable text wrapping
-        productTable.Range.WrapText = True
-    End If
+        ' If column is too large, set it to max
+        If Not column.Range.EntireColumn.Hidden = True Then
+            With column.Range
+                If .ColumnWidth < minColumnWidth Then
+                    .ColumnWidth = minColumnWidth
+                ElseIf .ColumnWidth > maxColumnWidth Then
+                    .ColumnWidth = maxColumnWidth
+                End If
+            End With
+        End If
+    Next column
+    
+    ' Resize the title to fit the new width
+    Set cell = frontPage.Cells(1, 1)
+    Range(cell(1, 1), cell(1, columnCount)).Merge Across:=True
+    
+    ' Re-enable text wrapping
+    productTable.Range.WrapText = True
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
     ' Provide error message to user
@@ -140,9 +118,6 @@ End Sub
 
 ' Update database tables
 Public Sub UpdateDatabaseTables()
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-
     Dim table As ListObject
 
     ' Enable error handeling
@@ -178,8 +153,6 @@ Public Sub UpdateDatabaseTables()
         End If
     Next
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
     ' Provide error message to user
@@ -188,10 +161,7 @@ ErrorHandler:
 End Sub
 
 ' Update product table with new rooms
-Public Sub UpdateProductRooms()
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-    
+Public Sub UpdateProductRooms()    
     Dim rooms As Range
     Dim room As Range
     Dim col As ListColumn
@@ -199,33 +169,29 @@ Public Sub UpdateProductRooms()
     ' Enable error handeling
     On Error GoTo ErrorHandler
 
-    If Not roomTable Is Nothing And Not productTable Is Nothing Then
-        ' Get rooms from table of rooms
-        Set rooms = roomTable.ListColumns(1).DataBodyRange
-        
-        ' Loop through each room in the table
-        For Each room In rooms
-            ' Check if the current cell is empty
-            If Not room.value = "" Then
-                ' Reset the col object & attempt to find new room column
-                Set col = Nothing
-                On Error Resume Next
-                Set col = productTable.ListColumns(room.value)
+    ' Get rooms from table of rooms
+    Set rooms = roomTable.ListColumns(1).DataBodyRange
+    
+    ' Loop through each room in the table
+    For Each room In rooms
+        ' Check if the current cell is empty
+        If Not room.value = "" Then
+            ' Reset the col object & attempt to find new room column
+            Set col = Nothing
+            On Error Resume Next
+            Set col = productTable.ListColumns(room.value)
 
-                ' Check if the room column exists in the product table
-                If col Is Nothing Then
-                    ' Change scroll limit of the page to fit the table
-                    frontPage.ScrollArea = "A:" + Split(Cells(1, productTable.ListColumns.Count + 1).Address, "$")(1)
+            ' Check if the room column exists in the product table
+            If col Is Nothing Then
+                ' Change scroll limit of the page to fit the table
+                frontPage.ScrollArea = "A:" + Split(Cells(1, productTable.ListColumns.Count + 1).Address, "$")(1)
 
-                    ' Add new room column
-                    productTable.ListColumns.Add.Name = room.value
-                End If
+                ' Add new room column
+                productTable.ListColumns.Add.Name = room.value
             End If
-        Next
-    End If
+        End If
+    Next
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
     ' Provide error message to user
@@ -234,10 +200,7 @@ ErrorHandler:
 End Sub
 
 ' Sort product table
-Public Sub SortProductTable()
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-    
+Public Sub SortProductTable()    
     Dim sortDirection As Variant
 
     ' Enable error handeling
@@ -258,8 +221,6 @@ Public Sub SortProductTable()
         .Apply
     End With
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
     ' Provide error message to user
@@ -269,9 +230,6 @@ End Sub
 
 ' Search the product table with text
 Public Sub SearchProductTable()
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-
     Dim searchColumn As Integer
 
     ' Enable error handeling
@@ -296,8 +254,6 @@ Public Sub SearchProductTable()
         "=*" & searchCell.value & "*", Operator:=xlAnd
     End If
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
     ' Provide error message to user
@@ -307,10 +263,8 @@ End Sub
 
 ' Add new items to product table
 Public Sub AddNewProduct()
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-
     Dim newRow As ListRow
+    Dim column As ListColumn
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
@@ -322,18 +276,11 @@ Public Sub AddNewProduct()
         Set newRow = productTable.ListRows.Add(1)
     End If
 
-    ' Get data from table
-    With newProductTable.DataBodyRange
-        newRow.Range(1) = .Cells(1, 1)
-        newRow.Range(2) = .Cells(1, 2)
-        newRow.Range(3) = .Cells(1, 3)
-        newRow.Range(4) = .Cells(1, 4)
-        newRow.Range(5) = .Cells(1, 5)
-        newRow.Range(6) = .Cells(1, 6)
-    End With
+    ' Insert data into product table
+    For i = 1 To newProductTable.ListColumns.Count
+        newRow.Range(i) = newProductTable.DataBodyRange.Cells(1, i)
+    Next
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
     ' Provide error message to user
@@ -354,27 +301,20 @@ End Sub
 
 ' Reset filters
 Public Sub ResetFilters()
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-
     Dim column As ListColumn
 
     ' Enable error handeling
     On Error GoTo ErrorHandler
 
-    If Not filterTable Is Nothing Then
-        ' Clear all filter values
-        For Each column In filterTable.ListColumns
-            filterTable.DataBodyRange.Cells(1, column.Index).value = ""
-            filterTable.DataBodyRange.Cells(2, column.Index).value = ""
-        Next
-    End If
+    ' Clear all filter values
+    For Each column In filterTable.ListColumns
+        filterTable.DataBodyRange.Cells(1, column.Index).value = ""
+        filterTable.DataBodyRange.Cells(2, column.Index).value = ""
+    Next
 
     ' Apply new filters to product table
     ApplyProductFilters
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
     ' Provide error message to user
@@ -384,9 +324,6 @@ End Sub
 
 ' Filter table base on user choices
 Public Sub SetProductFilters()
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-
     Dim column As ListColumn
 
     ' Enable error handeling
@@ -433,8 +370,6 @@ Public Sub SetProductFilters()
     ' Apply new filters
     ApplyProductFilters
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
     ' Provide error message to user
@@ -444,9 +379,6 @@ End Sub
 
 ' Apply product table filters
 Public Sub ApplyProductFilters()
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-
     Dim column As ListColumn
 
     ' Enable error handeling
@@ -491,8 +423,6 @@ Public Sub ApplyProductFilters()
         End If
     Next
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
     ' Provide error message to user
@@ -502,9 +432,6 @@ End Sub
 
 ' Export filtered product data to new file
 Public Sub ExportProductData()
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-
     Dim newWorkbook As Workbook
     Dim savePath As String
     Dim saveFileName As String
@@ -512,45 +439,40 @@ Public Sub ExportProductData()
     ' Enable error handeling
     On Error GoTo ErrorHandler
 
-    ' Check if table exists
-    If Not productTable Is Nothing Then
-        ' Prompt the user for a save location and file name
-        savePath = Application.GetSaveAsFilename(FileFilter:="Excel Files (*.xlsx), *.xlsx")
-        
-        ' Check if the user canceled the save dialog
-        If savePath <> "False" Then
-            Dim column As ListColumn
-            Dim newColumnIndex As Integer
+    ' Prompt the user for a save location and file name
+    savePath = Application.GetSaveAsFilename(FileFilter:="Excel Files (*.xlsx), *.xlsx")
+    
+    ' Check if the user canceled the save dialog
+    If savePath <> "False" Then
+        Dim column As ListColumn
+        Dim newColumnIndex As Integer
 
-            ' Create a new workbook
-            Set newWorkbook = Workbooks.Add
-            newColumnIndex = 1
+        ' Create a new workbook
+        Set newWorkbook = Workbooks.Add
+        newColumnIndex = 1
 
-            ' Copy filtered data to new workbook, use custom index to account for hidden columns
-            For Each column In productTable.ListColumns
-                If column.Range.EntireColumn.Hidden = False Then
-                    column.Range.SpecialCells(xlCellTypeVisible).Copy Destination:=newWorkbook.Worksheets(1).Cells(1, newColumnIndex)
-                    newColumnIndex = newColumnIndex + 1
-                End If
-            Next
+        ' Copy filtered data to new workbook, use custom index to account for hidden columns
+        For Each column In productTable.ListColumns
+            If column.Range.EntireColumn.Hidden = False Then
+                column.Range.SpecialCells(xlCellTypeVisible).Copy Destination:=newWorkbook.Worksheets(1).Cells(1, newColumnIndex)
+                newColumnIndex = newColumnIndex + 1
+            End If
+        Next
 
-            ' Set new workbook stylings
-            With newWorkbook.Worksheets(1)
-                .PageSetup.Orientation = xlLandscape
-                .Cells.WrapText = False
-                .Cells.EntireRow.AutoFit
-                .Cells.EntireColumn.AutoFit
-            End With
+        ' Set new workbook stylings
+        With newWorkbook.Worksheets(1)
+            .PageSetup.Orientation = xlLandscape
+            .Cells.WrapText = False
+            .Cells.EntireRow.AutoFit
+            .Cells.EntireColumn.AutoFit
+        End With
 
-            ' Save the new workbook with the user-specified name
-            saveFileName = Mid(savePath, InStrRev(savePath, "\") + 1)
-            newWorkbook.SaveAs savePath
-            newWorkbook.Close SaveChanges:=False
-        End If
+        ' Save the new workbook with the user-specified name
+        saveFileName = Mid(savePath, InStrRev(savePath, "\") + 1)
+        newWorkbook.SaveAs savePath
+        newWorkbook.Close SaveChanges:=False
     End If
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
 ErrorHandler:
@@ -559,9 +481,6 @@ End Sub
 
 ' Backup database to new file
 Public Sub BackupDatabase()
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-
     Dim defaultFileName, savePath, dateNow As String
 
     ' Enable error handeling
@@ -581,8 +500,6 @@ Public Sub BackupDatabase()
         ThisWorkbook.SaveCopyAs Filename:=savePath
     End If
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
 ErrorHandler:
@@ -597,9 +514,6 @@ End Sub
 
 ' Hide or show sections
 Public Sub ShowHideSection(ByVal target As String)
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-
     Dim button As Variant
     Dim resetButton As Variant
     DIm addButton As Variant
@@ -652,8 +566,6 @@ Public Sub ShowHideSection(ByVal target As String)
         .Left = addButtonCell.Left
     End With
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
 ErrorHandler:
@@ -662,9 +574,6 @@ End Sub
 
 ' Add new rooms to the product table
 Public Sub AddNewRoom()
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-
     Dim newRow As ListRow
     Dim newRoomName As String
 
@@ -687,8 +596,6 @@ Public Sub AddNewRoom()
     ' Re-apply existing table style
     productTable.TableStyle = productTable.TableStyle
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
 ErrorHandler:
@@ -697,9 +604,6 @@ End Sub
 
 ' Add new rooms to the product table
 Public Sub DeleteRoom()
-    ' Disable events & screen updating
-    SetScreenEvents(False)
-
     Dim roomName, confirmation As String
     DIm rowIndex As Integer
     Dim col As ListColumn
@@ -749,18 +653,32 @@ Public Sub DeleteRoom()
         End If
     End If
 
-    ' Re-Enable events & screen updating
-    SetScreenEvents(True)
     Exit Sub
 
 ErrorHandler:
     ErrorMessage
 End Sub
 
+' Wrapper sub to disbale screen updating
+Public Sub Wrap(subName As String, ParamArray args() As Variant)
+    ' Disable events and screen updating
+    SetScreenEvents(False)
+
+    ' Run provided sub or function with or without arguments
+    If IsMissing(args) Then
+        Application.Run "ThisWorkbook." & subName
+    Else
+        Application.Run "ThisWorkbook." & subName, args(0)
+    End If
+
+    ' Disable events and screen updating
+    SetScreenEvents(True)
+End Sub
+
 ' Run at launch
 Private Sub Workbook_Open()
-    ' Ensure events and screen updating are enabled
-    SetScreenEvents(True)
+    ' Disable events and screen udpating
+    SetScreenEvents(false)
 
     ' Get global variables
     GetVariables
@@ -773,4 +691,7 @@ Private Sub Workbook_Open()
 
     ' Apply page style
     SetPageStyle
+
+    ' Enable events and screen updating
+    SetScreenEvents(True)
 End Sub
