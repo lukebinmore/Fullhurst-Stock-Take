@@ -32,8 +32,8 @@ Public Sub GetVariables()
     Set filterSection = frontPage.Range("A4:A8").EntireRow
     Set newProductSection = frontPage.Range("A9:A12").EntireRow
     Set searchSection = frontPage.Range("A13:A14").EntireRow
-    Set resetButtonCell = frontPage.Range("F7")
-    Set addButtonCell = frontPage.Range("H11")
+    Set resetButtonCell = frontPage.Range("H7")
+    Set addButtonCell = frontPage.Range("J11")
     minColumnWidth = 3
     maxColumnWidth = 40
 End Sub
